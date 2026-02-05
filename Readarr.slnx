@@ -1,0 +1,48 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Posix" />
+    <Platform Name="Windows" />
+  </Configurations>
+  <Folder Name="/Host/">
+    <Project Path="src/NzbDrone.Console/Readarr.Console.csproj" />
+    <Project Path="src/NzbDrone.Host/Readarr.Host.csproj" />
+    <Project Path="src/NzbDrone/Readarr.csproj">
+      <Build Solution="*|Posix" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/Platform/">
+    <Project Path="src/NzbDrone.Mono/Readarr.Mono.csproj" />
+    <Project Path="src/NzbDrone.Windows/Readarr.Windows.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="../.editorconfig" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/NzbDrone.Api.Test/Readarr.Api.Test.csproj" />
+    <Project Path="tests/NzbDrone.Automation.Test/Readarr.Automation.Test.csproj" />
+    <Project Path="tests/NzbDrone.Common.Test/Readarr.Common.Test.csproj" />
+    <Project Path="tests/NzbDrone.Core.Test/Readarr.Core.Test.csproj" />
+    <Project Path="tests/NzbDrone.Host.Test/Readarr.Host.Test.csproj" />
+    <Project Path="tests/NzbDrone.Integration.Test/Readarr.Integration.Test.csproj" />
+    <Project Path="tests/NzbDrone.Libraries.Test/Readarr.Libraries.Test.csproj" />
+    <Project Path="tests/NzbDrone.Update.Test/Readarr.Update.Test.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Platform/">
+    <Project Path="tests/NzbDrone.Mono.Test/Readarr.Mono.Test.csproj" />
+    <Project Path="tests/NzbDrone.Windows.Test/Readarr.Windows.Test.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Test.Common/">
+    <Project Path="tests/NzbDrone.Test.Common/Readarr.Test.Common.csproj" />
+    <Project Path="tests/NzbDrone.Test.Dummy/Readarr.Test.Dummy.csproj" />
+  </Folder>
+  <Folder Name="/WindowsServiceHelpers/">
+    <Project Path="src/ServiceHelpers/ServiceInstall/ServiceInstall.csproj" />
+    <Project Path="src/ServiceHelpers/ServiceUninstall/ServiceUninstall.csproj" />
+  </Folder>
+  <Project Path="src/NzbDrone.Common/Readarr.Common.csproj" />
+  <Project Path="src/NzbDrone.Core/Readarr.Core.csproj" />
+  <Project Path="src/NzbDrone.SignalR/Readarr.SignalR.csproj" />
+  <Project Path="src/NzbDrone.Update/Readarr.Update.csproj" />
+  <Project Path="src/Readarr.Api.V1/Readarr.Api.V1.csproj" />
+  <Project Path="src/Readarr.Http/Readarr.Http.csproj" />
+</Solution>

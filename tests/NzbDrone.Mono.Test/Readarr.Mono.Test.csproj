@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net6.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Posix.NETStandard" />
@@ -8,7 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NzbDrone.Common.Test\Readarr.Common.Test.csproj" />
     <ProjectReference Include="..\NzbDrone.Test.Common\Readarr.Test.Common.csproj" />
-    <ProjectReference Include="..\NzbDrone.Mono\Readarr.Mono.csproj" />
+    <ProjectReference Include="..\..\src\NzbDrone.Mono\Readarr.Mono.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Files\**\*.*">

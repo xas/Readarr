@@ -1,29 +1,20 @@
-﻿using FluentValidation.Validators;
+﻿using FluentValidation;
 using NzbDrone.Core.Books;
 
 namespace NzbDrone.Core.Validation.Paths
 {
-    public class AuthorExistsValidator : PropertyValidator
+    public class AuthorExistsValidator : AbstractValidator<string>
     {
         private readonly IAuthorService _authorService;
 
         public AuthorExistsValidator(IAuthorService authorService)
         {
             _authorService = authorService;
-        }
 
-        protected override string GetDefaultMessageTemplate() => "This author has already been added";
-
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue == null)
-            {
-                return true;
-            }
-
-            var foreignAuthorId = context.PropertyValue.ToString();
-
-            return _authorService.FindById(foreignAuthorId) == null;
+            RuleFor(a => a)
+                .Must(a => _authorService.FindById(a) is null)
+                .When(a => a is not null)
+                .WithMessage("This author has already been added");
         }
     }
 }

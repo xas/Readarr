@@ -1,5 +1,4 @@
 using FluentValidation;
-using FluentValidation.Validators;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 
@@ -13,20 +12,14 @@ namespace NzbDrone.Core.Validation.Paths
         }
     }
 
-    public class PathValidator : PropertyValidator
+    public class PathValidator : AbstractValidator<string>
     {
-        protected override string GetDefaultMessageTemplate() => "Invalid Path: '{path}'";
-
-        protected override bool IsValid(PropertyValidatorContext context)
+        public PathValidator()
         {
-            if (context.PropertyValue == null)
-            {
-                return false;
-            }
-
-            context.MessageFormatter.AppendArgument("path", context.PropertyValue.ToString());
-
-            return context.PropertyValue.ToString().IsPathValid(PathValidationType.CurrentOs);
+            RuleFor(p => p)
+                .NotNull()
+                .Must(f => f.IsPathValid(PathValidationType.CurrentOs))
+                .WithMessage("Invalid Path: '{PropertyValue}'");
         }
     }
 }

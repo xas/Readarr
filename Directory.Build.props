@@ -10,7 +10,7 @@
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
     <RuntimeIdentifiers>win-x64;win-x86;osx-x64;osx-arm64;linux-x64;linux-musl-x64;linux-arm;linux-musl-arm;linux-arm64;linux-musl-arm64</RuntimeIdentifiers>
 
-    <ReadarrRootDir>$(MSBuildThisFileDirectory)..\</ReadarrRootDir>
+    <ReadarrRootDir>$(MSBuildThisFileDirectory)</ReadarrRootDir>
 
     <!-- Specifies the type of output -->
     <ReadarrOutputType>Library</ReadarrOutputType>
@@ -81,6 +81,7 @@
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 
     <Deterministic Condition="$(AssemblyVersion.EndsWith('*'))">False</Deterministic>
 

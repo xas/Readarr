@@ -8,20 +8,17 @@
     <PackageReference Include="DryIoc.dll" />
     <PackageReference Include="IPAddressRange" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-	<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="NLog.Extensions.Logging" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NLog" />
+    <PackageReference Include="NLog.Targets.ConcurrentFile" />
     <PackageReference Include="Sentry" />
     <PackageReference Include="SharpZipLib" />
     <PackageReference Include="System.IO.Abstractions" />
-    <PackageReference Include="System.Text.Json" />
-    <PackageReference Include="System.ValueTuple" />
-    <PackageReference Include="System.Data.SQLite.Core.Servarr" />
-    <PackageReference Include="System.Runtime.Loader" />
+    <PackageReference Include="System.Data.SQLite.Core" />
     <PackageReference Include="System.Configuration.ConfigurationManager" />
     <PackageReference Include="System.ServiceProcess.ServiceController" />
-    <PackageReference Include="Microsoft.Win32.Registry" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="EnsureThat\Resources\ExceptionMessages.Designer.cs">
@@ -32,6 +29,7 @@
     <EmbeddedResource Update="EnsureThat\Resources\ExceptionMessages.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>ExceptionMessages.Designer.cs</LastGenOutput>
+      <LogicalName>NzbDrone.Common.EnsureThat.Resources.ExceptionMessages.resources</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 </Project>

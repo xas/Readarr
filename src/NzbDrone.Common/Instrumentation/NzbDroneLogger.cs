@@ -161,7 +161,7 @@ namespace NzbDrone.Common.Instrumentation
 
         private static void RegisterUpdateFile(IAppFolderInfo appFolderInfo)
         {
-            var fileTarget = new FileTarget();
+            var fileTarget = new ConcurrentFileTarget();
 
             fileTarget.Name = "updateFileLogger";
             fileTarget.FileName = Path.Combine(appFolderInfo.GetUpdateLogFolder(), DateTime.Now.ToString("yyyy.MM.dd-HH.mm") + ".txt");

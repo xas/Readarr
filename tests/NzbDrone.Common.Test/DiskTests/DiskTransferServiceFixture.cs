@@ -5,6 +5,7 @@ using System.Linq;
 using FluentAssertions;
 using Moq;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Test.Common;
@@ -565,7 +566,7 @@ namespace NzbDrone.Common.Test.DiskTests
 
             var count = Subject.MirrorFolder(source.FullName, destination.FullName);
 
-            count.Should().Equals(0);
+            count.Should().Be(0);
             destination.GetFileSystemInfos().Should().BeEmpty();
         }
 
@@ -585,7 +586,7 @@ namespace NzbDrone.Common.Test.DiskTests
 
             var count = Subject.MirrorFolder(source.FullName, destination.FullName);
 
-            count.Should().Equals(0);
+            count.Should().Be(0);
             destination.GetFileSystemInfos().Should().HaveCount(1);
         }
 
@@ -602,7 +603,7 @@ namespace NzbDrone.Common.Test.DiskTests
 
             var count = Subject.MirrorFolder(source.FullName, destination.FullName);
 
-            count.Should().Equals(3);
+            count.Should().Be(3);
             VerifyCopyFolder(original.FullName, destination.FullName);
         }
 
@@ -619,7 +620,7 @@ namespace NzbDrone.Common.Test.DiskTests
 
             var count = Subject.MirrorFolder(source.FullName, destination.FullName);
 
-            count.Should().Equals(3);
+            count.Should().Be(3);
 
             File.Exists(Path.Combine(destination.FullName, _nfsFile)).Should().BeFalse();
         }
@@ -639,7 +640,7 @@ namespace NzbDrone.Common.Test.DiskTests
 
             var count = Subject.MirrorFolder(source.FullName, destination.FullName);
 
-            count.Should().Equals(0);
+            count.Should().Be(0);
             VerifyCopyFolder(original.FullName, destination.FullName);
         }
 
@@ -656,7 +657,7 @@ namespace NzbDrone.Common.Test.DiskTests
 
             var count = Subject.MirrorFolder(source.FullName + Path.DirectorySeparatorChar, destination.FullName);
 
-            count.Should().Equals(3);
+            count.Should().Be(3);
             VerifyCopyFolder(original.FullName, destination.FullName);
         }
 
@@ -875,15 +876,15 @@ namespace NzbDrone.Common.Test.DiskTests
 
             Mocker.GetMock<IDiskProvider>()
                 .Setup(v => v.GetDirectoryInfos(It.IsAny<string>()))
-                .Returns<string>(v => fileSystem.DirectoryInfo.FromDirectoryName(v).GetDirectories().ToList());
+                .Returns<string>(v => fileSystem.DirectoryInfo.New(v).GetDirectories().ToList());
 
             Mocker.GetMock<IDiskProvider>()
                 .Setup(v => v.GetFileInfos(It.IsAny<string>(), It.IsAny<bool>()))
-                .Returns((string v, bool recursive) => fileSystem.DirectoryInfo.FromDirectoryName(v).GetFiles("*", new EnumerationOptions { RecurseSubdirectories = recursive }).ToList());
+                .Returns((string v, bool recursive) => fileSystem.DirectoryInfo.New(v).GetFiles("*", new EnumerationOptions { RecurseSubdirectories = recursive }).ToList());
 
             Mocker.GetMock<IDiskProvider>()
                 .Setup(v => v.GetFileSize(It.IsAny<string>()))
-                .Returns<string>(v => fileSystem.FileInfo.FromFileName(v).Length);
+                .Returns<string>(v => fileSystem.FileInfo.New(v).Length);
 
             Mocker.GetMock<IDiskProvider>()
                 .Setup(v => v.TryCreateHardLink(It.IsAny<string>(), It.IsAny<string>()))

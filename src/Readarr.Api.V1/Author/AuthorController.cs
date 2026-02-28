@@ -60,7 +60,7 @@ namespace Readarr.Api.V1.Author
                             SystemFolderValidator systemFolderValidator,
                             QualityProfileExistsValidator qualityProfileExistsValidator,
                             MetadataProfileExistsValidator metadataProfileExistsValidator,
-                            AuthorFolderAsRootFolderValidator authorFolderAsRootFolderValidator)
+                            AuthorFolderAsRootFolderValidator<AuthorResource> authorFolderAsRootFolderValidator)
             : base(signalRBroadcaster)
         {
             _authorService = authorService;

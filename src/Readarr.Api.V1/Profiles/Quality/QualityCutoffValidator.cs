@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using FluentValidation;
 using FluentValidation.Validators;
@@ -13,19 +12,21 @@ namespace Readarr.Api.V1.Profiles.Quality
         }
     }
 
-    public class ValidCutoffValidator<T> : PropertyValidator
+    public class ValidCutoffValidator<T> : PropertyValidator<T, int>
     {
-        protected override string GetDefaultMessageTemplate() => "Cutoff must be an allowed quality or group";
+        public override string Name => "ValidCutoffValidator";
 
-        protected override bool IsValid(PropertyValidatorContext context)
+        public override bool IsValid(ValidationContext<T> context, int value)
         {
-            var cutoff = (int)context.PropertyValue;
-            dynamic instance = context.ParentContext.InstanceToValidate;
-            var items = instance.Items as IList<QualityProfileQualityItemResource>;
+            if (context.InstanceToValidate is QualityProfileResource quality)
+            {
+                var cutoffItem = quality.Items.SingleOrDefault(i => (i.Quality == null && i.Id == value) || i.Quality?.Id == value);
+                return cutoffItem is { Allowed: true };
+            }
 
-            var cutoffItem = items?.SingleOrDefault(i => (i.Quality == null && i.Id == cutoff) || i.Quality?.Id == cutoff);
-
-            return cutoffItem is { Allowed: true };
+            return false;
         }
+
+        protected override string GetDefaultMessageTemplate(string errorCode) => $"{errorCode}: Cutoff must be an allowed quality or group";
     }
 }

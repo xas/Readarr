@@ -4,7 +4,7 @@ using NLog.Targets;
 
 namespace NzbDrone.Common.Instrumentation
 {
-    public class NzbDroneFileTarget : FileTarget
+    public class NzbDroneFileTarget : ConcurrentFileTarget
     {
         protected override void RenderFormattedMessage(LogEventInfo logEvent, StringBuilder target)
         {

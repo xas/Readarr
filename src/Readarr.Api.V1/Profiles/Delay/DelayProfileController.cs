@@ -19,7 +19,7 @@ namespace Readarr.Api.V1.Profiles.Delay
             _delayProfileService = delayProfileService;
 
             SharedValidator.RuleFor(d => d.Tags).NotEmpty().When(d => d.Id != 1);
-            SharedValidator.RuleFor(d => d.Tags).EmptyCollection<DelayProfileResource, int>().When(d => d.Id == 1);
+            SharedValidator.RuleFor(d => d.Tags).EmptyCollection().When(d => d.Id == 1);
             SharedValidator.RuleFor(d => d.Tags).SetValidator(tagInUseValidator);
             SharedValidator.RuleFor(d => d.UsenetDelay).GreaterThanOrEqualTo(0);
             SharedValidator.RuleFor(d => d.TorrentDelay).GreaterThanOrEqualTo(0);

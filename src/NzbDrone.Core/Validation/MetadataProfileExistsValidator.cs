@@ -1,32 +1,20 @@
-using FluentValidation.Validators;
+using FluentValidation;
 using NzbDrone.Core.Profiles.Metadata;
 
 namespace NzbDrone.Core.Validation
 {
-    public class MetadataProfileExistsValidator : PropertyValidator
+    public class MetadataProfileExistsValidator : AbstractValidator<int>
     {
         private readonly IMetadataProfileService _profileService;
 
         public MetadataProfileExistsValidator(IMetadataProfileService profileService)
         {
             _profileService = profileService;
-        }
 
-        protected override string GetDefaultMessageTemplate() => "Metadata profile does not exist";
-
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue == null)
-            {
-                return true;
-            }
-
-            if ((int)context.PropertyValue == 0)
-            {
-                return true;
-            }
-
-            return _profileService.Exists((int)context.PropertyValue);
+            RuleFor(md => md)
+                .Must(md => _profileService.Exists(md))
+                .When(md => md != 0)
+                .WithMessage("Metadata profile does not exist");
         }
     }
 }

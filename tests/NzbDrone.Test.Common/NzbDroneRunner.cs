@@ -58,7 +58,7 @@ namespace NzbDrone.Test.Common
             _startupLog = new List<string>();
             if (BuildInfo.IsDebug)
             {
-                Start(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "_output", "net6.0", readarrConsoleExe));
+                Start(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "_output", "net10.0", readarrConsoleExe));
             }
             else
             {
@@ -74,7 +74,7 @@ namespace NzbDrone.Test.Common
                     TestContext.Progress.WriteLine("Readarr has exited unexpectedly");
                     Thread.Sleep(2000);
                     var output = _startupLog.Join(Environment.NewLine);
-                    Assert.Fail("Process has exited: ExitCode={0} Output={1}", _nzbDroneProcess.ExitCode, output);
+                    Assert.Fail($"Process has exited: ExitCode={_nzbDroneProcess.ExitCode} Output={output}");
                 }
 
                 var request = new RestRequest("system/status");

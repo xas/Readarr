@@ -1,12 +1,12 @@
 ﻿using System.IO;
 using System.Text.RegularExpressions;
-using FluentValidation.Validators;
+using FluentValidation;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.EnvironmentInfo;
 
 namespace NzbDrone.Core.Validation.Paths
 {
-    public class MappedNetworkDriveValidator : PropertyValidator
+    public class MappedNetworkDriveValidator : AbstractValidator<string>
     {
         private readonly IRuntimeInfo _runtimeInfo;
         private readonly IDiskProvider _diskProvider;
@@ -17,37 +17,33 @@ namespace NzbDrone.Core.Validation.Paths
         {
             _runtimeInfo = runtimeInfo;
             _diskProvider = diskProvider;
-        }
 
-        protected override string GetDefaultMessageTemplate() => "Mapped Network Drive and Windows Service";
+            RuleFor(net => net)
+                .NotNull()
+                .Custom((net, ctx) =>
+                {
+                    if (OsInfo.IsNotWindows)
+                    {
+                        return;
+                    }
 
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue == null)
-            {
-                return false;
-            }
+                    if (!_runtimeInfo.IsWindowsService)
+                    {
+                        return;
+                    }
 
-            if (OsInfo.IsNotWindows)
-            {
-                return true;
-            }
+                    if (!DriveRegex.IsMatch(net))
+                    {
+                        return;
+                    }
 
-            if (!_runtimeInfo.IsWindowsService)
-            {
-                return true;
-            }
+                    var mount = _diskProvider.GetMount(net);
 
-            var path = context.PropertyValue.ToString();
-
-            if (!DriveRegex.IsMatch(path))
-            {
-                return true;
-            }
-
-            var mount = _diskProvider.GetMount(path);
-
-            return mount is not { DriveType: DriveType.Network };
+                    if (mount is not { DriveType: DriveType.Network })
+                    {
+                        ctx.AddFailure("Mapped Network Drive and Windows Service");
+                    }
+                });
         }
     }
 }

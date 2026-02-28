@@ -10,189 +10,207 @@ namespace Readarr.Api.V1.Profiles.Quality
     {
         public static IRuleBuilderOptions<T, IList<QualityProfileQualityItemResource>> ValidItems<T>(this IRuleBuilder<T, IList<QualityProfileQualityItemResource>> ruleBuilder)
         {
-            ruleBuilder.SetValidator(new NotEmptyValidator(null));
-            ruleBuilder.SetValidator(new AllowedValidator<T>());
-            ruleBuilder.SetValidator(new QualityNameValidator<T>());
-            ruleBuilder.SetValidator(new GroupItemValidator<T>());
-            ruleBuilder.SetValidator(new ItemGroupIdValidator<T>());
-            ruleBuilder.SetValidator(new UniqueIdValidator<T>());
-            ruleBuilder.SetValidator(new UniqueQualityIdValidator<T>());
-            ruleBuilder.SetValidator(new AllQualitiesValidator<T>());
+            ruleBuilder.SetValidator(new NotEmptyValidator<T, IList<QualityProfileQualityItemResource>>());
+            ruleBuilder.SetValidator(new AllowedValidator<IList<QualityProfileQualityItemResource>>());
+            ruleBuilder.SetValidator(new QualityNameValidator<IList<QualityProfileQualityItemResource>>());
+            ruleBuilder.SetValidator(new GroupItemValidator<IList<QualityProfileQualityItemResource>>());
+            ruleBuilder.SetValidator(new ItemGroupIdValidator<IList<QualityProfileQualityItemResource>>());
+            ruleBuilder.SetValidator(new UniqueIdValidator<IList<QualityProfileQualityItemResource>>());
+            ruleBuilder.SetValidator(new UniqueQualityIdValidator<IList<QualityProfileQualityItemResource>>());
+            ruleBuilder.SetValidator(new AllQualitiesValidator<IList<QualityProfileQualityItemResource>>());
 
-            return ruleBuilder.SetValidator(new ItemGroupNameValidator<T>());
+            return ruleBuilder.SetValidator(new ItemGroupNameValidator<IList<QualityProfileQualityItemResource>>());
         }
     }
 
-    public class AllowedValidator<T> : PropertyValidator
+    public class AllowedValidator<T> : AbstractValidator<T>
     {
-        protected override string GetDefaultMessageTemplate() => "Must contain at least one allowed quality";
-
-        protected override bool IsValid(PropertyValidatorContext context)
+        public AllowedValidator()
         {
-            return context.PropertyValue is IList<QualityProfileQualityItemResource> list &&
-                   list.Any(c => c.Allowed);
-        }
-    }
-
-    public class GroupItemValidator<T> : PropertyValidator
-    {
-        protected override string GetDefaultMessageTemplate() => "Groups must contain multiple qualities";
-
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue is not IList<QualityProfileQualityItemResource> items)
-            {
-                return false;
-            }
-
-            return !items.Any(i => i.Name.IsNotNullOrWhiteSpace() && i.Items.Count <= 1);
-        }
-    }
-
-    public class QualityNameValidator<T> : PropertyValidator
-    {
-        protected override string GetDefaultMessageTemplate() => "Individual qualities should not be named";
-
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue is not IList<QualityProfileQualityItemResource> items)
-            {
-                return false;
-            }
-
-            return !items.Any(i => i.Name.IsNotNullOrWhiteSpace() && i.Quality != null);
-        }
-    }
-
-    public class ItemGroupNameValidator<T> : PropertyValidator
-    {
-        protected override string GetDefaultMessageTemplate() => "Groups must have a name";
-
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue is not IList<QualityProfileQualityItemResource> items)
-            {
-                return false;
-            }
-
-            return !items.Any(i => i.Quality == null && i.Name.IsNullOrWhiteSpace());
-        }
-    }
-
-    public class ItemGroupIdValidator<T> : PropertyValidator
-    {
-        protected override string GetDefaultMessageTemplate() => "Groups must have an ID";
-
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue is not IList<QualityProfileQualityItemResource> items)
-            {
-                return false;
-            }
-
-            return !items.Any(i => i.Quality == null && i.Id == 0);
-        }
-    }
-
-    public class UniqueIdValidator<T> : PropertyValidator
-    {
-        protected override string GetDefaultMessageTemplate() => "Groups must have a unique ID";
-
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue is not IList<QualityProfileQualityItemResource> items)
-            {
-                return false;
-            }
-
-            var ids = items.Where(i => i.Id > 0).Select(i => i.Id);
-            var groupedIds = ids.GroupBy(i => i);
-
-            return groupedIds.All(g => g.Count() == 1);
-        }
-    }
-
-    public class UniqueQualityIdValidator<T> : PropertyValidator
-    {
-        protected override string GetDefaultMessageTemplate() => "Qualities can only be used once";
-
-        protected override bool IsValid(PropertyValidatorContext context)
-        {
-            if (context.PropertyValue is not IList<QualityProfileQualityItemResource> items)
-            {
-                return false;
-            }
-
-            var qualityIds = new HashSet<int>();
-
-            foreach (var item in items)
-            {
-                if (item.Id > 0)
+            RuleFor(q => q)
+                .Custom((q, ctx) =>
                 {
-                    foreach (var quality in item.Items)
+                    bool ok = q is IList<QualityProfileQualityItemResource> list && list.Any(l => l.Allowed);
+                    if (!ok)
                     {
-                        if (qualityIds.Contains(quality.Quality.Id))
+                        ctx.AddFailure("Must contain at least one allowed quality");
+                    }
+                });
+        }
+    }
+
+    public class GroupItemValidator<T> : AbstractValidator<T>
+    {
+        public GroupItemValidator()
+        {
+            RuleFor(g => g)
+                .Custom((g, ctx) =>
+                {
+                    bool ok = g is IList<QualityProfileQualityItemResource> list && !list.Any(l => l.Name.IsNotNullOrWhiteSpace() && l.Items.Count <= 1);
+                    if (!ok)
+                    {
+                        ctx.AddFailure("Groups must contain multiple qualities");
+                    }
+                });
+        }
+    }
+
+    public class QualityNameValidator<T> : AbstractValidator<T>
+    {
+        public QualityNameValidator()
+        {
+            RuleFor(q => q)
+                .Custom((q, ctx) =>
+                {
+                    bool ok = q is IList<QualityProfileQualityItemResource> list && !list.Any(l => l.Name.IsNotNullOrWhiteSpace() && l.Quality is not null);
+                    if (!ok)
+                    {
+                        ctx.AddFailure("Individual qualities should not be named");
+                    }
+                });
+        }
+    }
+
+    public class ItemGroupNameValidator<T> : AbstractValidator<T>
+    {
+        public ItemGroupNameValidator()
+        {
+            RuleFor(q => q)
+                .Custom((q, ctx) =>
+                {
+                    bool ok = q is IList<QualityProfileQualityItemResource> list && !list.Any(l => l.Quality is null && l.Name.IsNotNullOrWhiteSpace());
+                    if (!ok)
+                    {
+                        ctx.AddFailure("Groups must have a name");
+                    }
+                });
+        }
+    }
+
+    public class ItemGroupIdValidator<T> : AbstractValidator<T>
+    {
+        public ItemGroupIdValidator()
+        {
+            RuleFor(item => item)
+                .Custom((item, ctx) =>
+                {
+                    bool ok = item is IList<QualityProfileQualityItemResource> list && !list.Any(l => l.Quality is null && l.Id == 0);
+                    if (!ok)
+                    {
+                        ctx.AddFailure("Groups must have an ID");
+                    }
+                });
+        }
+    }
+
+    public class UniqueIdValidator<T> : AbstractValidator<T>
+    {
+        public UniqueIdValidator()
+        {
+            RuleFor(q => q)
+                .Custom((q, ctx) =>
+                {
+                    if (q is IList<QualityProfileQualityItemResource> list)
+                    {
+                        var ids = list.Where(i => i.Id > 0).Select(i => i.Id);
+                        var groupedIds = ids.GroupBy(i => i);
+                        if (groupedIds.All(g => g.Count() == 1))
                         {
-                            return false;
+                            return;
+                        }
+                    }
+
+                    ctx.AddFailure("Groups must have an unique ID");
+                });
+        }
+    }
+
+    public class UniqueQualityIdValidator<T> : AbstractValidator<T>
+    {
+        public UniqueQualityIdValidator()
+        {
+            RuleFor(q => q)
+                .Custom((q, ctx) =>
+                {
+                    if (q is IList<QualityProfileQualityItemResource> list)
+                    {
+                        var qualityIds = new HashSet<int>();
+                        foreach (var item in list)
+                        {
+                            if (item.Id > 0)
+                            {
+                                foreach (var quality in item.Items)
+                                {
+                                    if (qualityIds.Contains(quality.Quality.Id))
+                                    {
+                                        ctx.AddFailure("Qualities can only be used once");
+                                        return;
+                                    }
+
+                                    qualityIds.Add(quality.Quality.Id);
+                                }
+                            }
+                            else
+                            {
+                                if (qualityIds.Contains(item.Quality.Id))
+                                {
+                                    ctx.AddFailure("Qualities can only be used once");
+                                    return;
+                                }
+
+                                qualityIds.Add(item.Quality.Id);
+                            }
                         }
 
-                        qualityIds.Add(quality.Quality.Id);
-                    }
-                }
-                else
-                {
-                    if (qualityIds.Contains(item.Quality.Id))
-                    {
-                        return false;
+                        return;
                     }
 
-                    qualityIds.Add(item.Quality.Id);
-                }
-            }
-
-            return true;
+                    ctx.AddFailure("Qualities can only be used once");
+                });
         }
     }
 
-    public class AllQualitiesValidator<T> : PropertyValidator
+    public class AllQualitiesValidator<T> : AbstractValidator<T>
     {
-        protected override string GetDefaultMessageTemplate() => "Must contain all qualities";
-
-        protected override bool IsValid(PropertyValidatorContext context)
+        public AllQualitiesValidator()
         {
-            if (context.PropertyValue is not IList<QualityProfileQualityItemResource> items)
-            {
-                return false;
-            }
-
-            var qualityIds = new HashSet<int>();
-
-            foreach (var item in items)
-            {
-                if (item.Id > 0)
+            RuleFor(q => q)
+                .Custom((q, ctx) =>
                 {
-                    foreach (var quality in item.Items)
+                    if (q is IList<QualityProfileQualityItemResource> list)
                     {
-                        qualityIds.Add(quality.Quality.Id);
+                        var qualityIds = new HashSet<int>();
+                        foreach (var item in list)
+                        {
+                            if (item.Id > 0)
+                            {
+                                foreach (var quality in item.Items)
+                                {
+                                    qualityIds.Add(quality.Quality.Id);
+                                }
+                            }
+                            else
+                            {
+                                qualityIds.Add(item.Quality.Id);
+                            }
+                        }
+
+                        var allQualityIds = NzbDrone.Core.Qualities.Quality.All;
+
+                        foreach (var quality in allQualityIds)
+                        {
+                            if (!qualityIds.Contains(quality.Id))
+                            {
+                                ctx.AddFailure("Must contain all qualities");
+                                return;
+                            }
+                        }
+
+                        return;
                     }
-                }
-                else
-                {
-                    qualityIds.Add(item.Quality.Id);
-                }
-            }
 
-            var allQualityIds = NzbDrone.Core.Qualities.Quality.All;
-
-            foreach (var quality in allQualityIds)
-            {
-                if (!qualityIds.Contains(quality.Id))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+                    ctx.AddFailure("Must contain all qualities");
+                });
         }
     }
 }

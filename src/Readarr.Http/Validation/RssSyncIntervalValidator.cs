@@ -1,26 +1,15 @@
-﻿using FluentValidation.Validators;
+﻿using FluentValidation;
 
 namespace Readarr.Http.Validation
 {
-    public class RssSyncIntervalValidator : PropertyValidator
+    public class RssSyncIntervalValidator : AbstractValidator<int>
     {
-        protected override string GetDefaultMessageTemplate() => "Must be between 10 and 120 or 0 to disable";
-
-        protected override bool IsValid(PropertyValidatorContext context)
+        public RssSyncIntervalValidator()
         {
-            if (context.PropertyValue == null)
-            {
-                return true;
-            }
-
-            var value = (int)context.PropertyValue;
-
-            if (value == 0)
-            {
-                return true;
-            }
-
-            return value is >= 10 and <= 120;
+            RuleFor(v => v)
+                .IsZero()
+                .InclusiveBetween(10, 120)
+                .WithMessage("Must be between 10 and 120 or 0 to disable");
         }
     }
 }

@@ -8,6 +8,7 @@
     <PackageReference Include="Moq" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NLog" />
+    <PackageReference Include="NLog.Targets.ConcurrentFile" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="RestSharp" />
     <PackageReference Include="RestSharp.Serializers.SystemTextJson" />

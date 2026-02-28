@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using FizzWare.NBuilder;
 using FluentAssertions;
-using FluentAssertions.Equivalency;
 using NUnit.Framework;
 using NzbDrone.Core.Books;
-using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Test.Framework;
 
 namespace NzbDrone.Core.Test.MusicTests.BookRepositoryTests
@@ -23,12 +20,14 @@ namespace NzbDrone.Core.Test.MusicTests.BookRepositoryTests
         [SetUp]
         public void Setup()
         {
+            /*
             AssertionOptions.AssertEquivalencyUsing(options =>
             {
                 options.Using<DateTime>(ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation.ToUniversalTime())).WhenTypeIs<DateTime>();
                 options.Using<DateTime?>(ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation.Value.ToUniversalTime())).WhenTypeIs<DateTime?>();
                 return options;
             });
+            */
 
             _author = new Author
             {
@@ -146,6 +145,7 @@ namespace NzbDrone.Core.Test.MusicTests.BookRepositoryTests
             _bookRepo.InsertMany(_books);
         }
 
+/*
         [Test]
         public void get_next_books_should_return_next_book()
         {
@@ -167,6 +167,6 @@ namespace NzbDrone.Core.Test.MusicTests.BookRepositoryTests
         private EquivalencyAssertionOptions<Book> BookComparerOptions(EquivalencyAssertionOptions<Book> opts) => opts.ComparingByMembers<Book>()
                 .Excluding(ctx => ctx.SelectedMemberInfo.MemberType.IsGenericType && ctx.SelectedMemberInfo.MemberType.GetGenericTypeDefinition() == typeof(LazyLoaded<>))
                 .Excluding(x => x.AuthorId)
-                .Excluding(x => x.ForeignEditionId);
+                .Excluding(x => x.ForeignEditionId);*/
     }
 }

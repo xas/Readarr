@@ -54,7 +54,7 @@ namespace NzbDrone.Test.Common
         {
             const string layout = @"${level}|${message}${onexception:inner=${newline}${newline}${exception:format=ToString}${newline}}";
 
-            var fileTarget = new FileTarget();
+            var fileTarget = new ConcurrentFileTarget();
 
             fileTarget.Name = "Test File Logger";
             fileTarget.FileName = Path.Combine(TestContext.CurrentContext.WorkDirectory, "TestLog.txt");

@@ -1,5 +1,4 @@
 ﻿using FluentValidation;
-using FluentValidation.Validators;
 using NzbDrone.Common.Extensions;
 
 namespace NzbDrone.Core.Validation
@@ -12,20 +11,14 @@ namespace NzbDrone.Core.Validation
         }
     }
 
-    public class UrlValidator : PropertyValidator
+    public class UrlValidator : AbstractValidator<string>
     {
-        protected override string GetDefaultMessageTemplate() => "Invalid Url: '{url}'";
-
-        protected override bool IsValid(PropertyValidatorContext context)
+        public UrlValidator()
         {
-            if (context.PropertyValue == null)
-            {
-                return false;
-            }
-
-            context.MessageFormatter.AppendArgument("url", context.PropertyValue.ToString());
-
-            return context.PropertyValue.ToString().IsValidUrl();
+            RuleFor(s => s)
+                .Must(url => url.IsValidUrl())
+                .When(url => !string.IsNullOrEmpty(url))
+                .WithMessage("Invalid Url: '{PropertyValue}'");
         }
     }
 }

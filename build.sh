@@ -68,7 +68,7 @@ Build()
     rm -rf $outputFolder
     rm -rf $testPackageFolder
 
-    slnFile=src/Readarr.sln
+    slnFile=Readarr.slnx
 
     if [ $os = "windows" ]; then
         platform=Windows
@@ -148,7 +148,7 @@ PackageMacOS()
 {
     local framework="$1"
     local runtime="$2"
-    
+
     ProgressStart "Creating MacOS Package for $framework $runtime"
 
     local folder=$artifactsFolder/$runtime/$framework/Readarr
@@ -176,7 +176,7 @@ PackageMacOSApp()
 {
     local framework="$1"
     local runtime="$2"
-    
+
     ProgressStart "Creating macOS App Package for $framework $runtime"
 
     local folder="$artifactsFolder/$runtime-app/$framework"
@@ -203,7 +203,7 @@ PackageWindows()
     ProgressStart "Creating $runtime Package for $framework"
 
     local folder=$artifactsFolder/$runtime/$framework/Readarr
-    
+
     PackageFiles "$folder" "$framework" "$runtime"
     cp -r $outputFolder/$framework-windows/$runtime/publish/* $folder
 
@@ -244,20 +244,20 @@ BuildInstaller()
 {
     local framework="$1"
     local runtime="$2"
-    
+
     ./_inno/ISCC.exe distribution/windows/setup/readarr.iss "//DFramework=$framework" "//DRuntime=$runtime"
 }
 
 InstallInno()
 {
     ProgressStart "Installing portable Inno Setup"
-    
+
     rm -rf _inno
     curl -s --output innosetup.exe "https://files.jrsoftware.org/is/6/innosetup-${INNOVERSION:-6.2.0}.exe"
     mkdir _inno
     ./innosetup.exe //portable=1 //silent //currentuser //dir=.\\_inno
     rm innosetup.exe
-    
+
     ProgressEnd "Installed portable Inno Setup"
 }
 

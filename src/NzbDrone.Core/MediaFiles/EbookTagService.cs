@@ -16,7 +16,8 @@ using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.RootFolders;
-using PdfSharpCore.Pdf.IO;
+using PdfSharp.Pdf;
+using PdfSharp.Pdf.IO;
 using VersOne.Epub;
 using VersOne.Epub.Schema;
 
@@ -355,10 +356,10 @@ namespace NzbDrone.Core.MediaFiles
 
             try
             {
-                var book = PdfReader.Open(file, PdfDocumentOpenMode.InformationOnly);
+                PdfDocument book = PdfReader.Open(file, PdfDocumentOpenMode.Import);
                 if (book.Info != null)
                 {
-                    result.Authors = new List<string> { book.Info.Author };
+                    result.Authors = [book.Info.Author];
                     result.BookTitle = book.Info.Title;
 
                     _logger.Trace(book.Info.ToJson());

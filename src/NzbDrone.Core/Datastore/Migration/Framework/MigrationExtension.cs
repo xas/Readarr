@@ -1,7 +1,10 @@
+using System;
 using System.Data;
 using FluentMigrator;
+using FluentMigrator.Builders.Alter.Table;
 using FluentMigrator.Builders.Create;
 using FluentMigrator.Builders.Create.Table;
+using FluentMigrator.Infrastructure;
 using FluentMigrator.Runner;
 using FluentMigrator.Runner.BatchParser;
 using FluentMigrator.Runner.Generators.SQLite;
@@ -44,6 +47,18 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 .AddScoped<SQLiteGenerator>()
                 .AddScoped<IMigrationGenerator>(sp => sp.GetRequiredService<SQLiteGenerator>());
             return builder;
+        }
+
+        public static IAlterTableColumnOptionOrAddColumnOrAlterColumnSyntax AsDateTimeOffsetCompatible(this IAlterTableColumnAsTypeSyntax alter)
+        {
+            var context = ((IMigrationContextAccessor)alter)
+                    .GetMigrationContext();
+
+            return context.QuerySchema.DatabaseType.Equals(
+                ProcessorIdConstants.SQLite,
+                StringComparison.OrdinalIgnoreCase)
+                    ? alter.AsDateTime2()
+                    : alter.AsDateTimeOffset();
         }
     }
 }

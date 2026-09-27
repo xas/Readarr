@@ -10,51 +10,51 @@ namespace NzbDrone.Core.Datastore.Migration
         {
             Delete.FromTable("Commands").AllRows();
 
-            Alter.Table("Authors").AlterColumn("LastInfoSync").AsDateTimeOffset().Nullable();
-            Alter.Table("Authors").AlterColumn("Added").AsDateTimeOffset().Nullable();
-            Alter.Table("AuthorMetadata").AlterColumn("Born").AsDateTimeOffset().Nullable();
-            Alter.Table("AuthorMetadata").AlterColumn("Died").AsDateTimeOffset().Nullable();
-            Alter.Table("Blocklist").AlterColumn("Date").AsDateTimeOffset().NotNullable();
-            Alter.Table("Blocklist").AlterColumn("PublishedDate").AsDateTimeOffset().Nullable();
-            Alter.Table("Books").AlterColumn("ReleaseDate").AsDateTimeOffset().Nullable();
-            Alter.Table("Books").AlterColumn("LastInfoSync").AsDateTimeOffset().Nullable();
-            Alter.Table("Books").AlterColumn("Added").AsDateTimeOffset().Nullable();
-            Alter.Table("BookFiles").AlterColumn("DateAdded").AsDateTimeOffset().Nullable();
-            Alter.Table("BookFiles").AlterColumn("Modified").AsDateTimeOffset().Nullable();
-            Alter.Table("Commands").AlterColumn("QueuedAt").AsDateTimeOffset().NotNullable();
-            Alter.Table("Commands").AlterColumn("StartedAt").AsDateTimeOffset().Nullable();
-            Alter.Table("Commands").AlterColumn("EndedAt").AsDateTimeOffset().Nullable();
-            Alter.Table("DownloadClientStatus").AlterColumn("InitialFailure").AsDateTimeOffset().Nullable();
-            Alter.Table("DownloadClientStatus").AlterColumn("MostRecentFailure").AsDateTimeOffset().Nullable();
-            Alter.Table("DownloadClientStatus").AlterColumn("DisabledTill").AsDateTimeOffset().Nullable();
-            Alter.Table("Editions").AlterColumn("ReleaseDate").AsDateTimeOffset().Nullable();
-            Alter.Table("ExtraFiles").AlterColumn("Added").AsDateTimeOffset().NotNullable();
-            Alter.Table("ExtraFiles").AlterColumn("LastUpdated").AsDateTimeOffset().NotNullable();
-            Alter.Table("History").AlterColumn("Date").AsDateTimeOffset().NotNullable();
-            Alter.Table("ImportListStatus").AlterColumn("InitialFailure").AsDateTimeOffset().Nullable();
-            Alter.Table("ImportListStatus").AlterColumn("MostRecentFailure").AsDateTimeOffset().Nullable();
-            Alter.Table("ImportListStatus").AlterColumn("DisabledTill").AsDateTimeOffset().Nullable();
-            Alter.Table("IndexerStatus").AlterColumn("InitialFailure").AsDateTimeOffset().Nullable();
-            Alter.Table("IndexerStatus").AlterColumn("MostRecentFailure").AsDateTimeOffset().Nullable();
-            Alter.Table("IndexerStatus").AlterColumn("DisabledTill").AsDateTimeOffset().Nullable();
-            Alter.Table("MetadataFiles").AlterColumn("LastUpdated").AsDateTimeOffset().NotNullable();
-            Alter.Table("MetadataFiles").AlterColumn("Added").AsDateTimeOffset().Nullable();
-            Alter.Table("PendingReleases").AlterColumn("Added").AsDateTimeOffset().NotNullable();
-            Alter.Table("ScheduledTasks").AlterColumn("LastExecution").AsDateTimeOffset().NotNullable();
-            Alter.Table("ScheduledTasks").AlterColumn("LastStartTime").AsDateTimeOffset().Nullable();
-            Alter.Table("VersionInfo").AlterColumn("AppliedOn").AsDateTimeOffset().Nullable();
+            Alter.Table("Authors").AlterColumn("LastInfoSync").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("Authors").AlterColumn("Added").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("AuthorMetadata").AlterColumn("Born").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("AuthorMetadata").AlterColumn("Died").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("Blocklist").AlterColumn("Date").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("Blocklist").AlterColumn("PublishedDate").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("Books").AlterColumn("ReleaseDate").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("Books").AlterColumn("LastInfoSync").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("Books").AlterColumn("Added").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("BookFiles").AlterColumn("DateAdded").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("BookFiles").AlterColumn("Modified").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("Commands").AlterColumn("QueuedAt").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("Commands").AlterColumn("StartedAt").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("Commands").AlterColumn("EndedAt").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("DownloadClientStatus").AlterColumn("InitialFailure").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("DownloadClientStatus").AlterColumn("MostRecentFailure").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("DownloadClientStatus").AlterColumn("DisabledTill").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("Editions").AlterColumn("ReleaseDate").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("ExtraFiles").AlterColumn("Added").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("ExtraFiles").AlterColumn("LastUpdated").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("History").AlterColumn("Date").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("ImportListStatus").AlterColumn("InitialFailure").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("ImportListStatus").AlterColumn("MostRecentFailure").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("ImportListStatus").AlterColumn("DisabledTill").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("IndexerStatus").AlterColumn("InitialFailure").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("IndexerStatus").AlterColumn("MostRecentFailure").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("IndexerStatus").AlterColumn("DisabledTill").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("MetadataFiles").AlterColumn("LastUpdated").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("MetadataFiles").AlterColumn("Added").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("PendingReleases").AlterColumn("Added").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("ScheduledTasks").AlterColumn("LastExecution").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("ScheduledTasks").AlterColumn("LastStartTime").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("VersionInfo").AlterColumn("AppliedOn").AsDateTimeOffsetCompatible().Nullable();
         }
 
         protected override void LogDbUpgrade()
         {
-            Alter.Table("Logs").AlterColumn("Time").AsDateTimeOffset().NotNullable();
-            Alter.Table("VersionInfo").AlterColumn("AppliedOn").AsDateTimeOffset().Nullable();
+            Alter.Table("Logs").AlterColumn("Time").AsDateTimeOffsetCompatible().NotNullable();
+            Alter.Table("VersionInfo").AlterColumn("AppliedOn").AsDateTimeOffsetCompatible().Nullable();
         }
 
         protected override void CacheDbUpgrade()
         {
-            Alter.Table("HttpResponse").AlterColumn("LastRefresh").AsDateTimeOffset().Nullable();
-            Alter.Table("HttpResponse").AlterColumn("Expiry").AsDateTimeOffset().Nullable();
+            Alter.Table("HttpResponse").AlterColumn("LastRefresh").AsDateTimeOffsetCompatible().Nullable();
+            Alter.Table("HttpResponse").AlterColumn("Expiry").AsDateTimeOffsetCompatible().Nullable();
         }
     }
 }

@@ -87,6 +87,13 @@ namespace NzbDrone.Host
             {
                 options.ReturnHttpNotAcceptable = true;
             })
+            .ConfigureApiBehaviorOptions(options =>
+            {
+                // All concrete types (including API resources) are registered in the container,
+                // so since .NET 7 action parameters would be bound from services instead of the request body
+                // see https://github.com/dotnet/AspNetCore.Docs/blob/main/aspnetcore/breaking-changes/7/api-controller-action-parameters-di.md
+                options.DisableImplicitFromServicesParameters = true;
+            })
             .AddApplicationPart(typeof(SystemController).Assembly)
             .AddApplicationPart(typeof(StaticResourceController).Assembly)
             .AddJsonOptions(options =>

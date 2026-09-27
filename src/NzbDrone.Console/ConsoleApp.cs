@@ -53,22 +53,15 @@ namespace NzbDrone.Console
             {
                 System.Console.WriteLine("");
                 System.Console.WriteLine("");
-                Logger.Fatal(ex.Message + ". This can happen if another instance of Readarr is already running another application is using the same port (default: 8787) or the user has insufficient permissions");
+                Logger.Fatal(ex, ex.Message + ". This can happen if another instance of Readarr is already running another application is using the same port (default: 8787) or the user has insufficient permissions");
                 Exit(ExitCodes.RecoverableFailure, startupArgs);
             }
-            catch (IOException ex)
+            catch (IOException ex) when (ex.InnerException is AddressInUseException)
             {
-                if (ex.InnerException is AddressInUseException)
-                {
-                    System.Console.WriteLine("");
-                    System.Console.WriteLine("");
-                    Logger.Fatal(ex.Message + " This can happen if another instance of Readarr is already running another application is using the same port (default: 8787) or the user has insufficient permissions");
-                    Exit(ExitCodes.RecoverableFailure, startupArgs);
-                }
-                else
-                {
-                    throw;
-                }
+                System.Console.WriteLine("");
+                System.Console.WriteLine("");
+                Logger.Fatal(ex, ex.Message + " This can happen if another instance of Readarr is already running another application is using the same port (default: 8787) or the user has insufficient permissions");
+                Exit(ExitCodes.RecoverableFailure, startupArgs);
             }
             catch (RemoteAccessException ex)
             {

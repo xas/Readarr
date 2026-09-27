@@ -64,8 +64,8 @@ namespace Readarr.Http.REST
 
             if (Request.Method == "POST" || Request.Method == "PUT")
             {
-                var resourceArgs = context.ActionArguments.Values.Where(x => x.GetType() == typeof(TResource))
-                    .Select(x => x as TResource)
+                var resourceArgs = context.ActionArguments.Values
+                    .OfType<TResource>()
                     .ToList();
 
                 foreach (var resource in resourceArgs)

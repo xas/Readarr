@@ -48,6 +48,12 @@ namespace NzbDrone.Core.Instrumentation
 
         private void OnLogManagerOnConfigurationReloaded(object sender, LoggingConfigurationChangedEventArgs args)
         {
+            // LogManager.Shutdown() raises ConfigurationChanged with a null configuration
+            if (args.ActivatedConfiguration == null)
+            {
+                return;
+            }
+
             Register();
         }
 

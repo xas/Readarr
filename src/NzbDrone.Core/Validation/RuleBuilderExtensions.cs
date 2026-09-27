@@ -48,21 +48,22 @@ namespace NzbDrone.Core.Validation
         public static IRuleBuilderOptions<T, int> ValidPort<T>(this IRuleBuilder<T, int> ruleBuilder)
         {
             IComparer<int> comparer = Comparer<int>.Default;
-            return ruleBuilder.SetValidator(new InclusiveBetweenValidator<T, int>(1, 65535, comparer))
-                              .Must(x =>
-                              {
-                                  if (x <= 1024)
-                                  {
-                                      if (x == 80 || x == 443)
-                                      {
-                                          return true;
-                                      }
+            return ruleBuilder
+                            .SetValidator(new InclusiveBetweenValidator<T, int>(1, 65535, comparer))
+                            .Must(x =>
+                            {
+                                if (x == 80 || x == 443)
+                                {
+                                    return true;
+                                }
 
-                                      return false;
-                                  }
+                                if (x > 1024)
+                                {
+                                    return true;
+                                }
 
-                                  return true;
-                              });
+                                return false;
+                            });
         }
 
         public static IRuleBuilderOptions<T, TProp> AsWarning<T, TProp>(this IRuleBuilderOptions<T, TProp> ruleBuilder)

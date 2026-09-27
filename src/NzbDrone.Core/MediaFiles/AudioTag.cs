@@ -5,7 +5,6 @@ using System.Linq;
 using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation;
-using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
@@ -402,7 +401,6 @@ namespace NzbDrone.Core.MediaFiles
                 Logger.ForWarnEvent()
                     .Exception(ex)
                     .Message($"Tag writing failed for {path}")
-                    .WriteSentryWarn("Tag writing failed")
                     .Log();
             }
             finally

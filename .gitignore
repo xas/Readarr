@@ -11,6 +11,9 @@ src/**/[Oo]bj/
 *.user
 *.sln.docstates
 .vs/
+.vscode/
+.zed/
+.claude/
 
 # Build results
 *_i.c
@@ -153,3 +156,5 @@ _temp_*/**/*
 
 # API doc generation
 .config/
+
+AGENTS.md

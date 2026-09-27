@@ -8,8 +8,20 @@
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
   </PropertyGroup>
 
-  <Target Name="PublishAllRids">
-    <ItemGroup>
+  <!-- Pass -p:SkipTests=true to skip publishing the test projects -->
+  <Target Name="PublishAllRids" Condition="'$(SkipTests)' != 'true' Or '$(ReadarrOutputType)' != 'Test'">
+    <!-- Single-targeted projects: only pass RuntimeIdentifier. Adding TargetFramework as a global property
+         would create a second instance of each project (ProjectReferences build it without TargetFramework),
+         and both instances would build in parallel into the same obj/output folders. -->
+    <ItemGroup Condition="'$(TargetFrameworks)' == ''">
+      <_PublishRid Include="$(RuntimeIdentifiers)" />
+      <ProjectToPublish Include="@(_PublishRid->'$(MSBuildProjectFullPath)')">
+        <AdditionalProperties>RuntimeIdentifier=%(_PublishRid.Identity)</AdditionalProperties>
+      </ProjectToPublish>
+    </ItemGroup>
+
+    <!-- Multi-targeted projects: publish every RuntimeIdentifier/TargetFramework combination -->
+    <ItemGroup Condition="'$(TargetFrameworks)' != ''">
       <Frameworks Include="$(TargetFrameworks)" />
 
       <Combined Include="$(RuntimeIdentifiers)">
@@ -21,7 +33,6 @@
         <Framework>%(Framework)</Framework>
       </Renamed>
 
-      <!-- Transform RuntimeIdentifierForPublish items to project items to pass to MSBuild task -->
       <ProjectToPublish Include="@(Renamed->'$(MSBuildProjectFullPath)')">
         <AdditionalProperties>RuntimeIdentifier=%(Renamed.Runtime);TargetFramework=%(Renamed.Framework)</AdditionalProperties>
       </ProjectToPublish>

@@ -40,7 +40,6 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Configuration Condition="'$(Configuration)'==''">Release</Configuration>
     <!-- Centralize intermediate and default outputs -->
     <BaseIntermediateOutputPath>$(ReadarrRootDir)_temp\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
     <IntermediateOutputPath>$(ReadarrRootDir)_temp\obj\$(MSBuildProjectName)\$(Configuration)\</IntermediateOutputPath>
@@ -100,26 +99,11 @@
     <RootNamespace Condition="'$(ReadarrProject)'=='true'">$(MSBuildProjectName.Replace('Readarr','NzbDrone'))</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TestProject)'!='true'">
-    <!-- Annotates .NET assemblies with repository information including SHA -->
-    <!-- Sentry uses this to link directly to GitHub at the exact version/file/line -->
-    <!-- This is built-in on .NET 8 and can be removed once the project is updated -->
-    <PackageReference Include="Microsoft.SourceLink.GitHub" />
-  </ItemGroup>
-
   <!-- Sentry specific configuration: Only in Release mode -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <!-- https://docs.sentry.io/platforms/dotnet/configuration/msbuild/ -->
-    <!-- OrgSlug, ProjectSlug and AuthToken are required. 
+    <!-- OrgSlug, ProjectSlug and AuthToken are required.
     They can be set below, via argument to 'msbuild -p:' or environment variable -->
-    <SentryOrg></SentryOrg>
-    <SentryProject></SentryProject>
-    <SentryUrl></SentryUrl> <!--  If empty, assumed to be sentry.io -->
-    <SentryAuthToken></SentryAuthToken> <!-- Use env var instead: SENTRY_AUTH_TOKEN -->
-
-    <!-- Upload PDBs to Sentry, enabling stack traces with line numbers and file paths
-      without the need to deploy the application with PDBs -->
-    <SentryUploadSymbols>true</SentryUploadSymbols>
 
     <!-- Source Link settings -->
     <!-- https://github.com/dotnet/sourcelink/blob/main/docs/README.md#publishrepositoryurl -->

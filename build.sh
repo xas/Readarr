@@ -21,15 +21,15 @@ UpdateVersionNumber()
 {
     if [ "$READARRVERSION" != "" ]; then
         echo "Updating Version Info"
-        sed -i'' -e "s/<AssemblyVersion>[0-9.*]\+<\/AssemblyVersion>/<AssemblyVersion>$READARRVERSION<\/AssemblyVersion>/g" src/Directory.Build.props
-        sed -i'' -e "s/<AssemblyConfiguration>[\$()A-Za-z-]\+<\/AssemblyConfiguration>/<AssemblyConfiguration>${BUILD_SOURCEBRANCHNAME}<\/AssemblyConfiguration>/g" src/Directory.Build.props
+        sed -i'' -e "s/<AssemblyVersion>[0-9.*]\+<\/AssemblyVersion>/<AssemblyVersion>$READARRVERSION<\/AssemblyVersion>/g" Directory.Build.props
+        sed -i'' -e "s/<AssemblyConfiguration>[\$()A-Za-z-]\+<\/AssemblyConfiguration>/<AssemblyConfiguration>${BUILD_SOURCEBRANCHNAME}<\/AssemblyConfiguration>/g" Directory.Build.props
         sed -i'' -e "s/<string>10.0.0.0<\/string>/<string>$READARRVERSION<\/string>/g" distribution/osx/Readarr.app/Contents/Info.plist
     fi
 }
 
 EnableExtraPlatformsInSDK()
 {
-    SDK_PATH=$(dotnet --list-sdks | grep -P '6\.\d\.\d+' | head -1 | sed 's/\(6\.[0-9]*\.[0-9]*\).*\[\(.*\)\]/\2\/\1/g')
+    SDK_PATH=$(dotnet --list-sdks | grep -P '10\.\d\.\d+' | head -1 | sed 's/\(10\.[0-9]*\.[0-9]*\).*\[\(.*\)\]/\2\/\1/g')
     BUNDLEDVERSIONS="${SDK_PATH}/Microsoft.NETCoreSdk.BundledVersions.props"
     if grep -q freebsd-x64 $BUNDLEDVERSIONS; then
         echo "Extra platforms already enabled"
@@ -41,8 +41,8 @@ EnableExtraPlatformsInSDK()
 
 EnableExtraPlatforms()
 {
-    if grep -qv freebsd-x64 src/Directory.Build.props; then
-        sed -i'' -e "s^<RuntimeIdentifiers>\(.*\)</RuntimeIdentifiers>^<RuntimeIdentifiers>\1;freebsd-x64;linux-x86</RuntimeIdentifiers>^g" src/Directory.Build.props
+    if grep -qv freebsd-x64 Directory.Build.props; then
+        sed -i'' -e "s^<RuntimeIdentifiers>\(.*\)</RuntimeIdentifiers>^<RuntimeIdentifiers>\1;freebsd-x64;linux-x86</RuntimeIdentifiers>^g" Directory.Build.props
     fi
 }
 
@@ -76,12 +76,19 @@ Build()
         platform=Posix
     fi
 
-    if [[ -z "$RID" || -z "$FRAMEWORK" ]];
+    local extraArgs=()
+
+    if [[ -n "$RID" && -n "$FRAMEWORK" ]];
     then
-        dotnet msbuild -restore $slnFile -p:Configuration=Release -p:Platform=$platform -t:PublishAllRids
-    else
-        dotnet msbuild -restore $slnFile -p:Configuration=Release -p:Platform=$platform -p:RuntimeIdentifiers=$RID -t:PublishAllRids
+        extraArgs+=("-p:RuntimeIdentifiers=$RID")
     fi
+
+    if [ "$SKIP_TESTS" = "YES" ];
+    then
+        extraArgs+=("-p:SkipTests=true")
+    fi
+
+    dotnet msbuild -restore $slnFile -p:Configuration=Release -p:Platform=$platform -t:PublishAllRids "${extraArgs[@]}"
 
     ProgressEnd 'Build'
 }
@@ -346,6 +353,10 @@ case $key in
         LINT=YES
         shift # past argument
         ;;
+    --skip-tests)
+        SKIP_TESTS=YES
+        shift # past argument
+        ;;
     --all)
         BACKEND=YES
         FRONTEND=YES
@@ -361,6 +372,15 @@ esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
+# Only a runtime/framework given (no action flag): local build of backend and frontend, without tests
+if [[ -n "$RID" && -n "$FRAMEWORK" && -z "$BACKEND$FRONTEND$PACKAGES$INSTALLER$LINT" ]];
+then
+    echo "Only runtime and framework provided, building backend and frontend without tests"
+    BACKEND=YES
+    FRONTEND=YES
+    SKIP_TESTS=YES
+fi
+
 if [ "$ENABLE_EXTRA_PLATFORMS_IN_SDK" = "YES" ];
 then
     EnableExtraPlatformsInSDK
@@ -374,7 +394,10 @@ then
         EnableExtraPlatforms
     fi
     Build
-    if [[ -z "$RID" || -z "$FRAMEWORK" ]];
+    if [ "$SKIP_TESTS" = "YES" ];
+    then
+        echo "Skipping test packages"
+    elif [[ -z "$RID" || -z "$FRAMEWORK" ]];
     then
         PackageTests "net10.0" "win-x64"
         PackageTests "net10.0" "win-x86"

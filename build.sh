@@ -49,14 +49,14 @@ EnableExtraPlatforms()
 LintUI()
 {
     ProgressStart 'ESLint'
-    yarn lint
+    pnpm lint
     ProgressEnd 'ESLint'
 
     ProgressStart 'Stylelint'
     if [ "$os" = "windows" ]; then
-        yarn stylelint-windows
+        pnpm stylelint-windows
     else
-        yarn stylelint-linux
+        pnpm stylelint-linux
     fi
     ProgressEnd 'Stylelint'
 }
@@ -93,17 +93,17 @@ Build()
     ProgressEnd 'Build'
 }
 
-YarnInstall()
+PnpmInstall()
 {
-    ProgressStart 'yarn install'
-    yarn install --frozen-lockfile --network-timeout 120000
-    ProgressEnd 'yarn install'
+    ProgressStart 'pnpm install'
+    pnpm install --frozen-lockfile
+    ProgressEnd 'pnpm install'
 }
 
 RunWebpack()
 {
     ProgressStart 'Running webpack'
-    yarn run build --env production
+    pnpm run build --env production
     ProgressEnd 'Running webpack'
 }
 
@@ -416,7 +416,7 @@ fi
 
 if [[ "$LINT" = "YES" || "$FRONTEND" = "YES" ]];
 then
-    YarnInstall
+    PnpmInstall
 fi
 
 if [ "$LINT" = "YES" ];

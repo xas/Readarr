@@ -25,4 +25,4 @@
 'Area: UI':
   - frontend/**/*
   - package.json
-  - yarn.lock
+  - pnpm-lock.yaml

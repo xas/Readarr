@@ -1,0 +1,11 @@
+# Pin exact versions when adding dependencies (was save-prefix "" in .yarnrc)
+savePrefix: ''
+
+allowBuilds:
+  '@parcel/watcher': true
+  core-js: true
+
+# Single version of each type package: transitive deps pulled a second copy, causing duplicate declarations
+overrides:
+  '@types/node': 26.6.3
+  '@types/react': 18.3.31

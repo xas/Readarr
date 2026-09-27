@@ -3,16 +3,17 @@
       "target": "esnext",
       "allowJs": true,
       "checkJs": false,
-      "baseUrl": "src",
+      "strict": false,
+      "noUncheckedSideEffectImports": false,
       "jsx": "react",
       "module": "esnext",
-      "moduleResolution": "node",
+      "moduleResolution": "bundler",
       "noEmit": true,
       "esModuleInterop": true,
       "typeRoots": ["node_modules/@types", "typings"],
       "paths": {
           "*": [
-              "*"
+              "./src/*"
           ]
       },
       "plugins": [{ "name": "typescript-plugin-css-modules" }]

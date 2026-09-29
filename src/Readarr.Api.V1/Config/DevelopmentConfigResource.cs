@@ -9,7 +9,6 @@ namespace Prowlarr.Api.V1.Config
         public string ConsoleLogLevel { get; set; }
         public bool LogSql { get; set; }
         public int LogRotate { get; set; }
-        public bool FilterSentryEvents { get; set; }
     }
 
     public static class DevelopmentConfigResourceMapper
@@ -21,8 +20,7 @@ namespace Prowlarr.Api.V1.Config
                 MetadataSource = configService.MetadataSource,
                 ConsoleLogLevel = model.ConsoleLogLevel,
                 LogSql = model.LogSql,
-                LogRotate = model.LogRotate,
-                FilterSentryEvents = model.FilterSentryEvents
+                LogRotate = model.LogRotate
             };
         }
     }

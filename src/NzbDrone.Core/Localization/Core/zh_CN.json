@@ -458,8 +458,6 @@
     "Label": "标签",
     "Component": "组件",
     "ConsoleLogLevel": "控制台日志级别",
-    "FilterAnalyticsEvents": "筛选分析事件",
-    "FilterSentryEventsHelpText": "过滤已知的用户错误事件，不让其作为分析报告发送",
     "LogRotateHelpText": "保存在日志文件夹中的最大日志文件数",
     "LogRotation": "日志轮替",
     "LogSqlHelpText": "记录来自{appName}的所有SQL查询",

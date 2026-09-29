@@ -466,8 +466,6 @@
     "LogRotation": "Logrotation",
     "LogRotateHelpText": "Max. Anzahl der zu behaltenden Logdateien",
     "Label": "Label",
-    "FilterSentryEventsHelpText": "Sende keine bekannten Benutzerfehler Ereignisse an Analystics",
-    "FilterAnalyticsEvents": "Analystische Ergeinisse filtern",
     "ReplaceIllegalCharactersHelpText": "Wenn nicht aktiviert, werden Sonderzeichen ganz entfernt",
     "LogSqlHelpText": "Log alle SQL Abfragen von {appName}",
     "OutputPath": "Ausgabe-Pfad",

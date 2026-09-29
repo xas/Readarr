@@ -440,8 +440,6 @@
     "MaintenanceRelease": "Version de maintenance : corrections de bugs et autres améliorations. Voir l'historique des validations Github pour plus de détails",
     "LogRotation": "Rotation du journal",
     "LogRotateHelpText": "Nombre maximum de fichiers journaux à conserver dans le dossier des journaux",
-    "FilterSentryEventsHelpText": "Filtrer les événements d'erreur utilisateur connus pour qu'ils ne soient pas envoyés en tant qu'Analytics",
-    "FilterAnalyticsEvents": "Filtrer les événements d'analyse",
     "DeleteBookFileMessageText": "Voulez-vous vraiment supprimer {0} ?",
     "ConsoleLogLevel": "Niveau de journalisation de la console",
     "NotAvailable": "Indisponible",

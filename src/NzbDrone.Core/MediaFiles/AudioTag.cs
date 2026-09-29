@@ -182,7 +182,6 @@ namespace NzbDrone.Core.MediaFiles
                 }
                 else
                 {
-                    // Log as error so it goes to sentry with correct fingerprint
                     Logger.Error(ex, "Tag reading failed for {0}", path);
                 }
             }

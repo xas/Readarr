@@ -812,8 +812,6 @@
     "ConsoleLogLevel": "Nivel de registro de consola",
     "DataMissingBooks": "Monitoriza libros que no tienen archivos o que no se han lanzado aún",
     "EnabledHelpText": "Señalar para habilitar el perfil de lanzamiento",
-    "FilterAnalyticsEvents": "Filtrar eventos analíticos",
-    "FilterSentryEventsHelpText": "Filtrar eventos de error de usuario conocidos para que no se envíen como Analíticas",
     "RootFolderPathHelpText": "Los elementos de la lista de carpetas raíz se añadirán a",
     "StatusEndedDeceased": "Fallecido",
     "LogRotateHelpText": "Número máximo de archivos de registro que se guardan en la carpeta de registros",

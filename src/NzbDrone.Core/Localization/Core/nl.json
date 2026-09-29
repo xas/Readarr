@@ -457,8 +457,6 @@
     "Component": "Component",
     "ConsoleLogLevel": "Console-logboekniveau",
     "DeleteBookFileMessageText": "Weet u zeker dat u {0} wilt verwijderen?",
-    "FilterAnalyticsEvents": "Analytics-gebeurtenissen filteren",
-    "FilterSentryEventsHelpText": "Filter bekende gebruikersfoutgebeurtenissen zodat ze niet als Analytiek worden verzonden",
     "Level": "Niveau",
     "LogRotateHelpText": "Maximaal aantal logbestanden om te bewaren in de logboek-map",
     "LogRotation": "Logboekrotatie",

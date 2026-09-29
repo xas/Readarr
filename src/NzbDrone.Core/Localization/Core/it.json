@@ -586,8 +586,6 @@
     "RestartRequiredHelpTextWarning": "Richiede il riavvio per avere effetti",
     "ConsoleLogLevel": "Livello di Log della Console",
     "DeleteBookFileMessageText": "Sicuro di voler eliminare {0}?",
-    "FilterAnalyticsEvents": "Filtrare gli eventi analitici",
-    "FilterSentryEventsHelpText": "Filtra gli eventi noti come errore utente dall'essere inviati come Analitica",
     "LogSqlHelpText": "Scrivi a log tutte le query SQL di {appName}",
     "MetadataProfile": "profilo metadati",
     "MetadataProfiles": "profilo metadati",

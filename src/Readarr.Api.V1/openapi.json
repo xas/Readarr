@@ -9936,9 +9936,6 @@
           "logRotate": {
             "type": "integer",
             "format": "int32"
-          },
-          "filterSentryEvents": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false

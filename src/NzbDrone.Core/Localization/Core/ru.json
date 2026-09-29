@@ -859,8 +859,6 @@
     "ConsoleLogLevel": "Уровень журналирования консоли",
     "Books": "Книга",
     "LogRotation": "Ротация журналов",
-    "FilterAnalyticsEvents": "Фильтровать события аналитики",
-    "FilterSentryEventsHelpText": "Фильтровать известные события ошибок пользователя, чтобы они не отправлялись в виде аналитики.",
     "UnmappedFiles": "Несопоставленные папки",
     "BuiltIn": "Встроенный",
     "CurrentlyInstalled": "Установлено",

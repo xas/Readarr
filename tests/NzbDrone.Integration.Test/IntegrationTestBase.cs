@@ -98,8 +98,6 @@ namespace NzbDrone.Integration.Test
             RestClient.AddDefaultHeader("Authentication", ApiKey);
             RestClient.AddDefaultHeader("X-Api-Key", ApiKey);
 
-            // TODO : is default ?
-            // RestClient.UseSystemTextJson();
             Blocklist = new ClientBase<BlocklistResource>(RestClient, ApiKey);
             Commands = new CommandClient(RestClient, ApiKey);
             Tasks = new ClientBase<TaskResource>(RestClient, ApiKey, "system/task");

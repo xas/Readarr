@@ -1,31 +1,30 @@
 using System.Linq;
-using FluentValidation;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Books;
 
 namespace NzbDrone.Core.Validation.Paths
 {
-    public class AuthorAncestorValidator : AbstractValidator<string>
+    public class AuthorAncestorValidator : PropertyValidator
     {
         private readonly IAuthorService _authorService;
 
         public AuthorAncestorValidator(IAuthorService authorService)
         {
             _authorService = authorService;
+        }
 
-            RuleFor(p => p)
-                .Custom((p, ctx) =>
-                {
-                    if (p is null)
-                    {
-                        return;
-                    }
+        protected override string GetDefaultMessageTemplate() => "Path '{path}' is an ancestor of an existing author";
 
-                    if (_authorService.AllAuthorPaths().Any(s => p.IsParentPath(s.Value)))
-                    {
-                        ctx.AddFailure("Path '{PropertyValue}' is an ancestor of an existing author");
-                    }
-                });
+        protected override bool IsValid(PropertyValidatorContext context)
+        {
+            if (context.PropertyValue == null)
+            {
+                return true;
+            }
+
+            context.MessageFormatter.AppendArgument("path", context.PropertyValue.ToString());
+
+            return !_authorService.AllAuthorPaths().Any(s => context.PropertyValue.ToString().IsParentPath(s.Value));
         }
     }
 }

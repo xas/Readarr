@@ -1,33 +1,37 @@
-using FluentValidation;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 
 namespace NzbDrone.Core.Validation.Paths
 {
-    public class SystemFolderValidator : AbstractValidator<string>
+    public class SystemFolderValidator : PropertyValidator
     {
-        public SystemFolderValidator()
+        protected override string GetDefaultMessageTemplate() => "Path '{path}' is {relationship} system folder {systemFolder}";
+
+        protected override bool IsValid(PropertyValidatorContext context)
         {
-            var systemFolders = SystemFolders.GetSystemFolders();
+            var folder = context.PropertyValue.ToString();
+            context.MessageFormatter.AppendArgument("path", folder);
 
-            RuleFor(p => p)
-                .Custom((p, ctx) =>
+            foreach (var systemFolder in SystemFolders.GetSystemFolders())
+            {
+                context.MessageFormatter.AppendArgument("systemFolder", systemFolder);
+
+                if (systemFolder.PathEquals(folder))
                 {
-                    foreach (string systemFolder in systemFolders)
-                    {
-                        if (systemFolder.PathEquals(p))
-                        {
-                            ctx.AddFailure($"Path '{p}' is set to system folder {systemFolder}");
-                            break;
-                        }
+                    context.MessageFormatter.AppendArgument("relationship", "set to");
 
-                        if (systemFolder.IsParentPath(p))
-                        {
-                            ctx.AddFailure($"Path '{p}' is child of system folder {systemFolder}");
-                            break;
-                        }
-                    }
-                });
+                    return false;
+                }
+
+                if (systemFolder.IsParentPath(folder))
+                {
+                    context.MessageFormatter.AppendArgument("relationship", "child of");
+
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

@@ -12,14 +12,20 @@ namespace NzbDrone.Core.Validation.Paths
         }
     }
 
-    public class PathValidator : AbstractValidator<string>
+    public class PathValidator : PropertyValidator
     {
-        public PathValidator()
+        protected override string GetDefaultMessageTemplate() => "Invalid Path: '{path}'";
+
+        protected override bool IsValid(PropertyValidatorContext context)
         {
-            RuleFor(p => p)
-                .NotNull()
-                .Must(f => f.IsPathValid(PathValidationType.CurrentOs))
-                .WithMessage("Invalid Path: '{PropertyValue}'");
+            context.MessageFormatter.AppendArgument("path", context.PropertyValue?.ToString() ?? string.Empty);
+
+            if (context.PropertyValue == null)
+            {
+                return false;
+            }
+
+            return context.PropertyValue.ToString().IsPathValid(PathValidationType.CurrentOs);
         }
     }
 }

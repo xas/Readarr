@@ -60,7 +60,7 @@ namespace Readarr.Api.V1.Author
                             SystemFolderValidator systemFolderValidator,
                             QualityProfileExistsValidator qualityProfileExistsValidator,
                             MetadataProfileExistsValidator metadataProfileExistsValidator,
-                            AuthorFolderAsRootFolderValidator<AuthorResource> authorFolderAsRootFolderValidator)
+                            AuthorFolderAsRootFolderValidator authorFolderAsRootFolderValidator)
             : base(signalRBroadcaster)
         {
             _authorService = authorService;
@@ -80,7 +80,7 @@ namespace Readarr.Api.V1.Author
                            .IsValidPath()
                            .SetValidator(rootFolderValidator)
                            .SetValidator(mappedNetworkDriveValidator)
-                           .SetValidator(authorPathValidator)
+                           .SetValidator(authorPathValidator, s => s.Id)
                            .SetValidator(authorAncestorValidator)
                            .SetValidator(recycleBinValidator)
                            .SetValidator(systemFolderValidator)

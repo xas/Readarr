@@ -1,12 +1,11 @@
 ﻿using System.IO;
 using System.Text.RegularExpressions;
-using FluentValidation;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.EnvironmentInfo;
 
 namespace NzbDrone.Core.Validation.Paths
 {
-    public class MappedNetworkDriveValidator : AbstractValidator<string>
+    public class MappedNetworkDriveValidator : PropertyValidator
     {
         private readonly IRuntimeInfo _runtimeInfo;
         private readonly IDiskProvider _diskProvider;
@@ -17,33 +16,37 @@ namespace NzbDrone.Core.Validation.Paths
         {
             _runtimeInfo = runtimeInfo;
             _diskProvider = diskProvider;
+        }
 
-            RuleFor(net => net)
-                .NotNull()
-                .Custom((net, ctx) =>
-                {
-                    if (OsInfo.IsNotWindows)
-                    {
-                        return;
-                    }
+        protected override string GetDefaultMessageTemplate() => "Mapped Network Drive and Windows Service";
 
-                    if (!_runtimeInfo.IsWindowsService)
-                    {
-                        return;
-                    }
+        protected override bool IsValid(PropertyValidatorContext context)
+        {
+            if (context.PropertyValue == null)
+            {
+                return false;
+            }
 
-                    if (!DriveRegex.IsMatch(net))
-                    {
-                        return;
-                    }
+            if (OsInfo.IsNotWindows)
+            {
+                return true;
+            }
 
-                    var mount = _diskProvider.GetMount(net);
+            if (!_runtimeInfo.IsWindowsService)
+            {
+                return true;
+            }
 
-                    if (mount is not { DriveType: DriveType.Network })
-                    {
-                        ctx.AddFailure("Mapped Network Drive and Windows Service");
-                    }
-                });
+            var path = context.PropertyValue.ToString();
+
+            if (!DriveRegex.IsMatch(path))
+            {
+                return true;
+            }
+
+            var mount = _diskProvider.GetMount(path);
+
+            return mount is not { DriveType: DriveType.Network };
         }
     }
 }

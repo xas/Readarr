@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using FluentValidation;
 using FluentValidation.Validators;
+using NzbDrone.Core.Validation;
 
 namespace Readarr.Http.Validation
 {

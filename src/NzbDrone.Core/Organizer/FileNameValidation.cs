@@ -1,9 +1,10 @@
-using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using FluentValidation;
 using FluentValidation.Validators;
+using NzbDrone.Common.Extensions;
+using NzbDrone.Core.Validation;
 
 namespace NzbDrone.Core.Organizer
 {
@@ -29,28 +30,45 @@ namespace NzbDrone.Core.Organizer
         }
     }
 
-    public class ValidStandardTrackFormatValidator : AbstractValidator<string>
+    public class ValidStandardTrackFormatValidator : PropertyValidator
     {
-        public ValidStandardTrackFormatValidator()
+        protected override string GetDefaultMessageTemplate() => "Must contain Book Title AND PartNumber, OR Original Title";
+
+        protected override bool IsValid(PropertyValidatorContext context)
         {
-            RuleFor(s => s)
-                .NotNull()
-                .Must(v => (FileNameBuilder.BookTitleRegex.IsMatch(v) && FileNameBuilder.PartRegex.IsMatch(v)) ||
-                            FileNameValidation.OriginalTokenRegex.IsMatch(v))
-                .WithMessage("Must contain Book Title AND PartNumber, OR Original Title");
+            if (context.PropertyValue is not string value)
+            {
+                return false;
+            }
+
+            return (FileNameBuilder.BookTitleRegex.IsMatch(value) && FileNameBuilder.PartRegex.IsMatch(value)) ||
+                   FileNameValidation.OriginalTokenRegex.IsMatch(value);
         }
     }
 
-    public class IllegalCharactersValidator : AbstractValidator<string>
+    public class IllegalCharactersValidator : PropertyValidator
     {
         private readonly char[] _invalidPathChars = Path.GetInvalidPathChars();
 
-        public IllegalCharactersValidator()
+        protected override string GetDefaultMessageTemplate() => "Contains illegal characters: {InvalidCharacters}";
+
+        protected override bool IsValid(PropertyValidatorContext context)
         {
-            RuleFor(x => x)
-                .Must(v => !_invalidPathChars.Any(x => v.Contains(x, StringComparison.OrdinalIgnoreCase)))
-                .When(v => !string.IsNullOrEmpty(v))
-                .WithMessage("Contains illegal characters: {PropertyValue}");
+            var value = context.PropertyValue as string;
+
+            if (value.IsNullOrWhiteSpace())
+            {
+                return true;
+            }
+
+            var invalidCharacters = _invalidPathChars.Where(i => value!.IndexOf(i) >= 0).ToList();
+            if (invalidCharacters.Any())
+            {
+                context.MessageFormatter.AppendArgument("InvalidCharacters", string.Join("", invalidCharacters));
+                return false;
+            }
+
+            return true;
         }
     }
 }

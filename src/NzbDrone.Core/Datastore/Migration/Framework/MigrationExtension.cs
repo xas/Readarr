@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using FluentMigrator;
+using FluentMigrator.Builders.Alter;
 using FluentMigrator.Builders.Alter.Table;
 using FluentMigrator.Builders.Create;
 using FluentMigrator.Builders.Create.Table;
@@ -49,16 +50,31 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             return builder;
         }
 
-        public static IAlterTableColumnOptionOrAddColumnOrAlterColumnSyntax AsDateTimeOffsetCompatible(this IAlterTableColumnAsTypeSyntax alter)
+        public static IAlterTableColumnOptionOrAddColumnOrAlterColumnSyntax AlterDateTimeOffsetColumn(this IAlterExpressionRoot alter, string table, string column)
         {
-            var context = ((IMigrationContextAccessor)alter)
-                    .GetMigrationContext();
+            var builder = alter.Table(table).AlterColumn(column);
 
-            return context.QuerySchema.DatabaseType.Equals(
-                ProcessorIdConstants.SQLite,
-                StringComparison.OrdinalIgnoreCase)
-                    ? alter.AsDateTime2()
-                    : alter.AsDateTimeOffset();
+            return IsSQLite(alter) ? builder.AsDateTime2() : builder.AsDateTimeOffset();
+        }
+
+        public static IAlterTableColumnOptionOrAddColumnOrAlterColumnSyntax AddDateTimeOffsetColumn(this IAlterExpressionRoot alter, string table, string column)
+        {
+            var builder = alter.Table(table).AddColumn(column);
+
+            return IsSQLite(alter) ? builder.AsDateTime2() : builder.AsDateTimeOffset();
+        }
+
+        public static ICreateTableColumnOptionOrWithColumnSyntax AsDateTimeOffsetCompatible(this ICreateTableColumnAsTypeSyntax column, ICreateExpressionRoot create)
+        {
+            return IsSQLite(create) ? column.AsDateTime2() : column.AsDateTimeOffset();
+        }
+
+        // FluentMigrator's SQLite type map does not support DbType.DateTimeOffset.
+        // The expression roots (Alter, Create, …) implement IMigrationContextAccessor; the table/column builders don't
+        private static bool IsSQLite(object expressionRoot)
+        {
+            return ((IMigrationContextAccessor)expressionRoot).GetMigrationContext()
+                .QuerySchema.DatabaseType.Equals(ProcessorIdConstants.SQLite, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

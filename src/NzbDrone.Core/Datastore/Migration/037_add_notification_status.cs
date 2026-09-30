@@ -10,10 +10,10 @@ namespace NzbDrone.Core.Datastore.Migration
         {
             Create.TableForModel("NotificationStatus")
                   .WithColumn("ProviderId").AsInt32().NotNullable().Unique()
-                  .WithColumn("InitialFailure").AsDateTimeOffset().Nullable()
-                  .WithColumn("MostRecentFailure").AsDateTimeOffset().Nullable()
+                  .WithColumn("InitialFailure").AsDateTimeOffsetCompatible(Create).Nullable()
+                  .WithColumn("MostRecentFailure").AsDateTimeOffsetCompatible(Create).Nullable()
                   .WithColumn("EscalationLevel").AsInt32().NotNullable()
-                  .WithColumn("DisabledTill").AsDateTimeOffset().Nullable();
+                  .WithColumn("DisabledTill").AsDateTimeOffsetCompatible(Create).Nullable();
         }
     }
 }

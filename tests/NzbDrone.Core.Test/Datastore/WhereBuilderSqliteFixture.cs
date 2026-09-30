@@ -195,7 +195,7 @@ namespace NzbDrone.Core.Test.Datastore
         public void enum_in_array()
         {
             var allowed = new AuthorStatusType[] { AuthorStatusType.Continuing, AuthorStatusType.Ended };
-            _subject = WhereMetadata(x => allowed.Contains(x.Status));
+            _subject = WhereMetadata(x => Enumerable.Contains(allowed, x.Status));
 
             _subject.ToString().Should().Be($"(\"AuthorMetadata\".\"Status\" IN @Clause1_P1)");
         }

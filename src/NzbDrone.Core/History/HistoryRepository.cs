@@ -90,7 +90,7 @@ namespace NzbDrone.Core.History
 
             return Query(h => h.AuthorId == idAuthorId &&
                          h.Quality == quality &&
-                         allowed.Contains((int)h.EventType));
+                         Enumerable.Contains(allowed, (int)h.EventType));
         }
 
         public void DeleteForAuthor(int authorId)

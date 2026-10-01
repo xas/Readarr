@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using Mono.Unix.Native;
 
 namespace NzbDrone.Mono.Interop
@@ -12,9 +11,6 @@ namespace NzbDrone.Mono.Interop
 
     internal static class NativeMethods
     {
-        [DllImport("libc", EntryPoint = "ioctl", SetLastError = true)]
-        private static extern int Ioctl(SafeUnixHandle dst_fd, IoctlRequest request, SafeUnixHandle src_fd);
-
         public static SafeUnixHandle open(string pathname, OpenFlags flags)
         {
             return new SafeUnixHandle(Syscall.open(pathname, flags, FilePermissions.DEFFILEMODE));
@@ -22,7 +18,7 @@ namespace NzbDrone.Mono.Interop
 
         internal static int clone_file(SafeUnixHandle link_fd, SafeUnixHandle src_fd)
         {
-            return Ioctl(link_fd, IoctlRequest.FICLONE, src_fd);
+            return LibC.Ioctl(link_fd, (uint)IoctlRequest.FICLONE, src_fd);
         }
     }
 }

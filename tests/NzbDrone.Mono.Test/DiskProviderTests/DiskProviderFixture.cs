@@ -139,6 +139,64 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             File.ReadAllText(destination).Should().Be("Some content");
         }
 
+        [Test]
+        public void should_keep_relative_symlink_when_copied_in_same_folder()
+        {
+            var tempFolder = GetTempFilePath();
+            Directory.CreateDirectory(tempFolder);
+
+            var source = Path.Combine(tempFolder, "symlink_source.txt");
+            var destination = Path.Combine(tempFolder, "symlink_destination.txt");
+
+            File.WriteAllText(Path.Combine(tempFolder, "target.txt"), "Some content");
+            File.CreateSymbolicLink(source, "target.txt");
+
+            Subject.CopyFile(source, destination);
+
+            new FileInfo(destination).LinkTarget.Should().Be("target.txt");
+            File.ReadAllText(destination).Should().Be("Some content");
+        }
+
+        [Test]
+        public void should_make_relative_symlink_absolute_when_moved_to_other_folder()
+        {
+            var tempFolder = GetTempFilePath();
+            var otherFolder = Path.Combine(tempFolder, "other");
+            Directory.CreateDirectory(otherFolder);
+
+            var file = Path.Combine(tempFolder, "target.txt");
+            var source = Path.Combine(tempFolder, "symlink_source.txt");
+            var destination = Path.Combine(otherFolder, "symlink_destination.txt");
+
+            File.WriteAllText(file, "Some content");
+            File.CreateSymbolicLink(source, "target.txt");
+
+            Subject.MoveFile(source, destination);
+
+            File.Exists(source).Should().BeFalse();
+            new FileInfo(destination).LinkTarget.Should().Be(file);
+            File.ReadAllText(destination).Should().Be("Some content");
+        }
+
+        [Test]
+        public void should_copy_symlink_when_cloning()
+        {
+            var tempFolder = GetTempFilePath();
+            Directory.CreateDirectory(tempFolder);
+
+            var file = Path.Combine(tempFolder, "target.txt");
+            var source = Path.Combine(tempFolder, "symlink_source.txt");
+            var destination = Path.Combine(tempFolder, "symlink_destination.txt");
+
+            File.WriteAllText(file, "Some content");
+            File.CreateSymbolicLink(source, file);
+
+            Subject.CloneFile(source, destination);
+
+            Mocker.GetMock<IRefLinkCreator>().Verify(v => v.TryCreateRefLink(It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+            new FileInfo(destination).LinkTarget.Should().Be(file);
+        }
+
         private void GivenSpecialMount(string rootDir)
         {
             Mocker.GetMock<ISymbolicLinkResolver>()

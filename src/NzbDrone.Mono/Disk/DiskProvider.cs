@@ -251,7 +251,7 @@ namespace NzbDrone.Mono.Disk
 
         protected override void CloneFileInternal(string source, string destination, bool overwrite)
         {
-            if (!FileExists(destination) && !UnixFileSystemInfo.GetFileSystemEntry(source).IsSymbolicLink)
+            if (!FileExists(destination) && GetSymbolicLinkTarget(source) == null)
             {
                 if (_createRefLink.TryCreateRefLink(source, destination))
                 {
@@ -264,31 +264,16 @@ namespace NzbDrone.Mono.Disk
 
         protected override void CopyFileInternal(string source, string destination, bool overwrite)
         {
-            var sourceInfo = UnixFileSystemInfo.GetFileSystemEntry(source);
+            var linkTarget = GetSymbolicLinkTarget(source);
 
-            if (sourceInfo.IsSymbolicLink)
+            if (linkTarget != null)
             {
-                var isSameDir = UnixPath.GetDirectoryName(source) == UnixPath.GetDirectoryName(destination);
-                var symlinkInfo = (UnixSymbolicLinkInfo)sourceInfo;
-                var symlinkPath = symlinkInfo.ContentsPath;
-
-                var newFile = new UnixSymbolicLinkInfo(destination);
-
                 if (FileExists(destination) && overwrite)
                 {
                     DeleteFile(destination);
                 }
 
-                if (isSameDir)
-                {
-                    // We're in the same dir, so we can preserve relative symlinks.
-                    newFile.CreateSymbolicLinkTo(symlinkInfo.ContentsPath);
-                }
-                else
-                {
-                    var fullPath = UnixPath.Combine(UnixPath.GetDirectoryName(source), symlinkPath);
-                    newFile.CreateSymbolicLinkTo(fullPath);
-                }
+                CreateSymbolicLinkCopy(source, destination, linkTarget);
             }
             else
             {
@@ -298,36 +283,21 @@ namespace NzbDrone.Mono.Disk
 
         protected override void MoveFileInternal(string source, string destination)
         {
-            var sourceInfo = UnixFileSystemInfo.GetFileSystemEntry(source);
+            var linkTarget = GetSymbolicLinkTarget(source);
 
-            if (sourceInfo.IsSymbolicLink)
+            if (linkTarget != null)
             {
-                var isSameDir = UnixPath.GetDirectoryName(source) == UnixPath.GetDirectoryName(destination);
-                var symlinkInfo = (UnixSymbolicLinkInfo)sourceInfo;
-                var symlinkPath = symlinkInfo.ContentsPath;
-
-                var newFile = new UnixSymbolicLinkInfo(destination);
-
-                if (isSameDir)
-                {
-                    // We're in the same dir, so we can preserve relative symlinks.
-                    newFile.CreateSymbolicLinkTo(symlinkInfo.ContentsPath);
-                }
-                else
-                {
-                    var fullPath = UnixPath.Combine(UnixPath.GetDirectoryName(source), symlinkPath);
-                    newFile.CreateSymbolicLinkTo(fullPath);
-                }
+                CreateSymbolicLinkCopy(source, destination, linkTarget);
 
                 try
                 {
                     // Finally remove the original symlink.
-                    symlinkInfo.Delete();
+                    _fileSystem.File.Delete(source);
                 }
                 catch
                 {
                     // Removing symlink failed, so rollback the new link and throw.
-                    newFile.Delete();
+                    _fileSystem.File.Delete(destination);
                     throw;
                 }
             }
@@ -335,6 +305,25 @@ namespace NzbDrone.Mono.Disk
             {
                 TransferFilePatched(source, destination, false, true);
             }
+        }
+
+        // Link contents as stored (relative or absolute), null if the path is not a symbolic link
+        private string GetSymbolicLinkTarget(string path)
+        {
+            return _fileSystem.FileInfo.New(path).LinkTarget;
+        }
+
+        private void CreateSymbolicLinkCopy(string source, string destination, string linkTarget)
+        {
+            var sourceFolder = Path.GetDirectoryName(source);
+
+            // In the same dir a relative symlink stays valid, elsewhere make it absolute.
+            if (sourceFolder != Path.GetDirectoryName(destination))
+            {
+                linkTarget = Path.Combine(sourceFolder, linkTarget);
+            }
+
+            _fileSystem.File.CreateSymbolicLink(destination, linkTarget);
         }
 
         private void TransferFilePatched(string source, string destination, bool overwrite, bool move)

@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using FluentAssertions;
-using Mono.Unix;
-using Mono.Unix.Native;
 using Moq;
 using NUnit.Framework;
 using NzbDrone.Common.Disk;
@@ -34,11 +32,11 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             {
                 if (Directory.Exists(_tempPath))
                 {
-                    Syscall.chmod(_tempPath, FilePermissions.S_IRWXU);
+                    File.SetUnixFileMode(_tempPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
                 }
                 else if (File.Exists(_tempPath))
                 {
-                    Syscall.chmod(_tempPath, FilePermissions.S_IRUSR | FilePermissions.S_IWUSR);
+                    File.SetUnixFileMode(_tempPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
                 }
 
                 _tempPath = null;
@@ -58,35 +56,51 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
         protected void SetWritePermissionsInternal(string path, bool writable, bool setgid)
         {
             // Remove Write permissions, we're still owner so we can clean it up, but we'll have to do that explicitly.
-            Syscall.stat(path, out var stat);
-            var mode = stat.st_mode;
+            var currentMode = File.GetUnixFileMode(path);
+            var mode = currentMode;
 
             if (writable)
             {
-                mode |= FilePermissions.S_IWUSR | FilePermissions.S_IWGRP | FilePermissions.S_IWOTH;
+                mode |= UnixFileMode.UserWrite | UnixFileMode.GroupWrite | UnixFileMode.OtherWrite;
             }
             else
             {
-                mode &= ~(FilePermissions.S_IWUSR | FilePermissions.S_IWGRP | FilePermissions.S_IWOTH);
+                mode &= ~(UnixFileMode.UserWrite | UnixFileMode.GroupWrite | UnixFileMode.OtherWrite);
             }
 
             if (setgid)
             {
-                mode |= FilePermissions.S_ISGID;
+                mode |= UnixFileMode.SetGroup;
             }
             else
             {
-                mode &= ~FilePermissions.S_ISGID;
+                mode &= ~UnixFileMode.SetGroup;
             }
 
-            if (stat.st_mode != mode)
+            if (currentMode != mode)
             {
-                if (Syscall.chmod(path, mode) < 0)
-                {
-                    var error = Stdlib.GetLastError();
-                    throw new LinuxPermissionsException("Error setting group: " + error);
-                }
+                File.SetUnixFileMode(path, mode);
             }
+        }
+
+        // Same format as Mono's NativeConvert.ToOctalPermissionString: 4 octal digits, e.g. "0644" or "2775"
+        private static string GetMode(string path)
+        {
+            return Convert.ToString((int)File.GetUnixFileMode(path), 8).PadLeft(4, '0');
+        }
+
+        private static string Run(string command, string args)
+        {
+            using var process = Process.Start(new ProcessStartInfo(command, args) { RedirectStandardOutput = true });
+            var output = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+            return output;
+        }
+
+        // .NET has no API for a file's group: `ls -n` prints numeric ids, the same on glibc, busybox and macOS
+        private static uint GetGroupId(string path)
+        {
+            return uint.Parse(Run("ls", $"-nd \"{path}\"").Split(' ', StringSplitOptions.RemoveEmptyEntries)[3]);
         }
 
         [Test]
@@ -101,14 +115,14 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
 
             File.WriteAllText(file, "Some content");
 
-            new UnixSymbolicLinkInfo(source).CreateSymbolicLinkTo(file);
+            File.CreateSymbolicLink(source, file);
 
             Subject.MoveFile(source, destination);
 
             File.Exists(file).Should().BeTrue();
             File.Exists(source).Should().BeFalse();
             File.Exists(destination).Should().BeTrue();
-            UnixFileSystemInfo.GetFileSystemEntry(destination).IsSymbolicLink.Should().BeTrue();
+            new FileInfo(destination).LinkTarget.Should().NotBeNull();
 
             File.ReadAllText(destination).Should().Be("Some content");
         }
@@ -125,15 +139,15 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
 
             File.WriteAllText(file, "Some content");
 
-            new UnixSymbolicLinkInfo(source).CreateSymbolicLinkTo(file);
+            File.CreateSymbolicLink(source, file);
 
             Subject.CopyFile(source, destination);
 
             File.Exists(file).Should().BeTrue();
             File.Exists(source).Should().BeTrue();
             File.Exists(destination).Should().BeTrue();
-            UnixFileSystemInfo.GetFileSystemEntry(source).IsSymbolicLink.Should().BeTrue();
-            UnixFileSystemInfo.GetFileSystemEntry(destination).IsSymbolicLink.Should().BeTrue();
+            new FileInfo(source).LinkTarget.Should().NotBeNull();
+            new FileInfo(destination).LinkTarget.Should().NotBeNull();
 
             File.ReadAllText(source).Should().Be("Some content");
             File.ReadAllText(destination).Should().Be("Some content");
@@ -307,24 +321,22 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             Directory.CreateDirectory(src);
 
             // Toggle one of the permission flags
-            Syscall.stat(src, out var origStat);
-            Syscall.chmod(src, origStat.st_mode ^ FilePermissions.S_IWGRP);
+            var origMode = File.GetUnixFileMode(src);
+            File.SetUnixFileMode(src, origMode ^ UnixFileMode.GroupWrite);
 
             // Verify test setup
-            Syscall.stat(src, out var srcStat);
-            srcStat.st_mode.Should().NotBe(origStat.st_mode);
+            var srcMode = File.GetUnixFileMode(src);
+            srcMode.Should().NotBe(origMode);
 
             Subject.CreateFolder(dst);
 
             // Verify test setup
-            Syscall.stat(dst, out var dstStat);
-            dstStat.st_mode.Should().Be(origStat.st_mode);
+            File.GetUnixFileMode(dst).Should().Be(origMode);
 
             Subject.CopyPermissions(src, dst);
 
             // Verify CopyPermissions
-            Syscall.stat(dst, out dstStat);
-            dstStat.st_mode.Should().Be(srcStat.st_mode);
+            File.GetUnixFileMode(dst).Should().Be(srcMode);
         }
 
         [Test]
@@ -337,23 +349,19 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             _tempPath = tempFile;
 
             // Verify test setup
-            Syscall.stat(tempFile, out var fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0444");
+            GetMode(tempFile).Should().Be("0444");
 
             Subject.SetPermissions(tempFile, "755", null);
-            Syscall.stat(tempFile, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0644");
+            GetMode(tempFile).Should().Be("0644");
 
             Subject.SetPermissions(tempFile, "0755", null);
-            Syscall.stat(tempFile, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0644");
+            GetMode(tempFile).Should().Be("0644");
 
             if (OsInfo.Os != Os.Bsd)
             {
                 // This is not allowed on BSD
                 Subject.SetPermissions(tempFile, "1775", null);
-                Syscall.stat(tempFile, out fileStat);
-                NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("1664");
+                GetMode(tempFile).Should().Be("1664");
             }
         }
 
@@ -367,24 +375,19 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             _tempPath = tempPath;
 
             // Verify test setup
-            Syscall.stat(tempPath, out var fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0555");
+            GetMode(tempPath).Should().Be("0555");
 
             Subject.SetPermissions(tempPath, "755", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0755");
+            GetMode(tempPath).Should().Be("0755");
 
             Subject.SetPermissions(tempPath, "775", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0775");
+            GetMode(tempPath).Should().Be("0775");
 
             Subject.SetPermissions(tempPath, "750", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0750");
+            GetMode(tempPath).Should().Be("0750");
 
             Subject.SetPermissions(tempPath, "051", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0051");
+            GetMode(tempPath).Should().Be("0051");
         }
 
         [Test]
@@ -397,24 +400,19 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             _tempPath = tempPath;
 
             // Verify test setup
-            Syscall.stat(tempPath, out var fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("2555");
+            GetMode(tempPath).Should().Be("2555");
 
             Subject.SetPermissions(tempPath, "755", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("2755");
+            GetMode(tempPath).Should().Be("2755");
 
             Subject.SetPermissions(tempPath, "775", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("2775");
+            GetMode(tempPath).Should().Be("2775");
 
             Subject.SetPermissions(tempPath, "750", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("2750");
+            GetMode(tempPath).Should().Be("2750");
 
             Subject.SetPermissions(tempPath, "051", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("2051");
+            GetMode(tempPath).Should().Be("2051");
         }
 
         [Test]
@@ -427,32 +425,19 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             _tempPath = tempPath;
 
             // Verify test setup
-            Syscall.stat(tempPath, out var fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("2555");
+            GetMode(tempPath).Should().Be("2555");
 
             Subject.SetPermissions(tempPath, "0755", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0755");
+            GetMode(tempPath).Should().Be("0755");
 
             Subject.SetPermissions(tempPath, "0775", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0775");
+            GetMode(tempPath).Should().Be("0775");
 
             Subject.SetPermissions(tempPath, "0750", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0750");
+            GetMode(tempPath).Should().Be("0750");
 
             Subject.SetPermissions(tempPath, "0051", null);
-            Syscall.stat(tempPath, out fileStat);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0051");
-        }
-
-        private static string Id(string args)
-        {
-            using var process = Process.Start(new ProcessStartInfo("id", args) { RedirectStandardOutput = true });
-            var output = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit();
-            return output;
+            GetMode(tempPath).Should().Be("0051");
         }
 
         [Test]
@@ -462,14 +447,13 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             File.WriteAllText(tempFile, "File1");
 
             // Last group of the current user: a supplementary group if there is one, so the group really changes
-            var name = Id("-Gn").Split(' ').Last();
-            var expected = uint.Parse(Id("-G").Split(' ').Last());
+            var name = Run("id", "-Gn").Split(' ').Last();
+            var expected = uint.Parse(Run("id", "-G").Split(' ').Last());
 
             Subject.SetPermissions(tempFile, "755", name);
 
-            Syscall.stat(tempFile, out var fileStat);
-            fileStat.st_gid.Should().Be(expected);
-            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0644");
+            GetGroupId(tempFile).Should().Be(expected);
+            GetMode(tempFile).Should().Be("0644");
         }
 
         [Test]

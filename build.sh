@@ -143,10 +143,6 @@ PackageLinux()
 
     echo "Adding Readarr.Mono to UpdatePackage"
     cp $folder/Readarr.Mono.* $folder/Readarr.Update
-    if [ "$framework" = "net10.0" ]; then
-        cp $folder/Mono.Posix.NETStandard.* $folder/Readarr.Update
-        cp $folder/libMonoPosixHelper.* $folder/Readarr.Update
-    fi
 
     ProgressEnd "Creating $runtime Package for $framework"
 }
@@ -171,10 +167,6 @@ PackageMacOS()
 
     echo "Adding Readarr.Mono to UpdatePackage"
     cp $folder/Readarr.Mono.* $folder/Readarr.Update
-    if [ "$framework" = "net10.0" ]; then
-        cp $folder/Mono.Posix.NETStandard.* $folder/Readarr.Update
-        cp $folder/libMonoPosixHelper.* $folder/Readarr.Update
-    fi
 
     ProgressEnd 'Creating MacOS Package'
 }
@@ -216,8 +208,6 @@ PackageWindows()
 
     echo "Removing Readarr.Mono"
     rm -f $folder/Readarr.Mono.*
-    rm -f $folder/Mono.Posix.NETStandard.*
-    rm -f $folder/libMonoPosixHelper.*
 
     echo "Adding Readarr.Windows to UpdatePackage"
     cp $folder/Readarr.Windows.* $folder/Readarr.Update

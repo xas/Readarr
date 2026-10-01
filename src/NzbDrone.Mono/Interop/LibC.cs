@@ -15,7 +15,9 @@ namespace NzbDrone.Mono.Interop
 
         public static int LastError => Marshal.GetLastPInvokeError();
 
-        public static string LastErrorMessage => Marshal.GetPInvokeErrorMessage(Marshal.GetLastPInvokeError());
+        public static string LastErrorMessage => GetErrorMessage(Marshal.GetLastPInvokeError());
+
+        public static string GetErrorMessage(int error) => Marshal.GetPInvokeErrorMessage(error);
 
         // Unlike File.Move, never falls back to copy + delete
         [LibraryImport(Library, EntryPoint = "rename", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]

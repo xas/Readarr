@@ -197,6 +197,70 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             new FileInfo(destination).LinkTarget.Should().Be(file);
         }
 
+        [Test]
+        public void should_rename_file()
+        {
+            var source = GetTempFilePath();
+            var destination = GetTempFilePath();
+            File.WriteAllText(source, "Some content");
+
+            Subject.TryRenameFile(source, destination).Should().BeTrue();
+
+            File.Exists(source).Should().BeFalse();
+            File.ReadAllText(destination).Should().Be("Some content");
+        }
+
+        [Test]
+        public void should_return_false_when_renaming_missing_file()
+        {
+            Subject.TryRenameFile(GetTempFilePath(), GetTempFilePath()).Should().BeFalse();
+        }
+
+        [Test]
+        public void should_not_hardlink_symlink()
+        {
+            var tempFolder = GetTempFilePath();
+            Directory.CreateDirectory(tempFolder);
+
+            var file = Path.Combine(tempFolder, "target.txt");
+            var source = Path.Combine(tempFolder, "symlink_source.txt");
+            var destination = Path.Combine(tempFolder, "hardlink_destination.txt");
+
+            File.WriteAllText(file, "Some content");
+            File.CreateSymbolicLink(source, file);
+
+            Subject.TryCreateHardLink(source, destination).Should().BeFalse();
+
+            Path.Exists(destination).Should().BeFalse();
+        }
+
+        [Test]
+        public void should_return_false_when_hardlink_destination_exists()
+        {
+            var source = GetTempFilePath();
+            var destination = GetTempFilePath();
+            File.WriteAllText(source, "Some content");
+            File.WriteAllText(destination, "Other content");
+
+            Subject.TryCreateHardLink(source, destination).Should().BeFalse();
+
+            File.ReadAllText(destination).Should().Be("Other content");
+        }
+
+        [Test]
+        public void should_not_overwrite_dangling_symlink_when_moving()
+        {
+            var source = GetTempFilePath();
+            var destination = GetTempFilePath();
+            File.WriteAllText(source, "Some content");
+            File.CreateSymbolicLink(destination, "/nonexistent/target");
+
+            Assert.Throws<FileAlreadyExistsException>(() => Subject.MoveFile(source, destination));
+
+            File.ReadAllText(source).Should().Be("Some content");
+            new FileInfo(destination).LinkTarget.Should().Be("/nonexistent/target");
+        }
+
         private void GivenSpecialMount(string rootDir)
         {
             Mocker.GetMock<ISymbolicLinkResolver>()

@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.Linq;
-using Mono.Unix;
-using Mono.Unix.Native;
 using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.EnsureThat;
@@ -334,13 +332,14 @@ namespace NzbDrone.Mono.Disk
             // Catch the exception and attempt to handle these edgecases
 
             // Mono 6.x till 6.10 doesn't properly try use rename first.
+            // Path.Exists does not follow symlinks (like lstat), so a dangling link at the destination is not overwritten.
             if (move)
             {
-                if (Syscall.lstat(source, out var sourcestat) == 0 &&
-                    Syscall.lstat(destination, out var deststat) != 0 &&
-                    Syscall.rename(source, destination) == 0)
+                if (_fileSystem.Path.Exists(source) &&
+                    !_fileSystem.Path.Exists(destination) &&
+                    LibC.Rename(source, destination) == 0)
                 {
-                    _logger.Trace("Moved '{0}' -> '{1}' using Syscall.rename", source, destination);
+                    _logger.Trace("Moved '{0}' -> '{1}' using rename", source, destination);
                     return;
                 }
             }
@@ -427,32 +426,32 @@ namespace NzbDrone.Mono.Disk
 
         public override bool TryRenameFile(string source, string destination)
         {
-            return Syscall.rename(source, destination) == 0;
+            return LibC.Rename(source, destination) == 0;
         }
 
         public override bool TryCreateHardLink(string source, string destination)
         {
             try
             {
-                var fileInfo = UnixFileSystemInfo.GetFileSystemEntry(source);
-
-                if (fileInfo.IsSymbolicLink)
+                if (GetSymbolicLinkTarget(source) != null)
                 {
                     return false;
                 }
 
-                fileInfo.CreateLink(destination);
-                return true;
-            }
-            catch (UnixIOException ex)
-            {
-                if (ex.ErrorCode == Errno.EXDEV)
+                if (LibC.Link(source, destination) == 0)
+                {
+                    return true;
+                }
+
+                var error = LibC.LastError;
+
+                if (error == LibC.EXDEV)
                 {
                     _logger.Trace("Hardlink '{0}' to '{1}' failed due to cross-device access.", source, destination);
                 }
                 else
                 {
-                    _logger.Debug(ex, "Hardlink '{0}' to '{1}' failed.", source, destination);
+                    _logger.Debug("Hardlink '{0}' to '{1}' failed: {2}", source, destination, LibC.GetErrorMessage(error));
                 }
 
                 return false;

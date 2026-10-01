@@ -1,6 +1,5 @@
 using System;
-using Mono.Unix;
-using Mono.Unix.Native;
+using System.IO;
 using NLog;
 
 namespace NzbDrone.Mono.Disk
@@ -38,8 +37,7 @@ namespace NzbDrone.Mono.Disk
                     }
                 }
 
-                var ex = new UnixIOException(Errno.ELOOP);
-                _logger.Warn("Failed to check for symlinks in the path {0}: {1}", path, ex.Message);
+                _logger.Warn("Failed to check for symlinks in the path {0}: Too many levels of symbolic links", path);
                 return path;
             }
             catch (Exception ex)
@@ -51,7 +49,7 @@ namespace NzbDrone.Mono.Disk
 
         private static void GetPathComponents(string path, out string[] components, out int lastIndex)
         {
-            var dirs = path.Split(UnixPath.DirectorySeparatorChar);
+            var dirs = path.Split(Path.DirectorySeparatorChar);
             var target = 0;
             for (var i = 0; i < dirs.Length; ++i)
             {
@@ -94,9 +92,9 @@ namespace NzbDrone.Mono.Disk
 
             for (var i = 0; i < lastIndex; ++i)
             {
-                if (i != 0 || UnixPath.IsPathRooted(path))
+                if (i != 0 || Path.IsPathRooted(path))
                 {
-                    realPath = string.Concat(realPath, UnixPath.DirectorySeparatorChar, dirs[i]);
+                    realPath = string.Concat(realPath, Path.DirectorySeparatorChar, dirs[i]);
                 }
                 else
                 {
@@ -112,7 +110,7 @@ namespace NzbDrone.Mono.Disk
 
                     if (count > 0)
                     {
-                        realPath = string.Concat(realPath, UnixPath.DirectorySeparatorChar, string.Join(UnixPath.DirectorySeparatorChar.ToString(), dirs, i + 1, lastIndex - i - 1));
+                        realPath = string.Concat(realPath, Path.DirectorySeparatorChar, string.Join(Path.DirectorySeparatorChar, dirs, i + 1, lastIndex - i - 1));
                     }
 
                     path = realPath;
@@ -123,48 +121,45 @@ namespace NzbDrone.Mono.Disk
             return false;
         }
 
-        private bool TryFollowSymbolicLink(ref string path, out bool wasSymLink)
+        private static bool TryFollowSymbolicLink(ref string path, out bool wasSymLink)
         {
-            if (!UnixFileSystemInfo.TryGetFileSystemEntry(path, out var fsentry) || !fsentry.Exists)
+            // Path.Exists does not follow symlinks (like lstat): true for a dangling link
+            if (!Path.Exists(path))
             {
                 wasSymLink = false;
                 return false;
             }
 
-            if (!fsentry.IsSymbolicLink)
-            {
-                wasSymLink = false;
-                return true;
-            }
-
-            var link = UnixPath.TryReadLink(path);
+            var link = new FileInfo(path).LinkTarget;
 
             if (link == null)
             {
-                var errno = Stdlib.GetLastError();
-                if (errno != Errno.EINVAL)
-                {
-                    _logger.Trace("Checking path {0} for symlink returned error {1}, assuming it's not a symlink.", path, errno);
-                }
+                wasSymLink = false;
+                return true;
+            }
 
-                wasSymLink = true;
-                return false;
+            if (Path.IsPathRooted(link))
+            {
+                path = link;
             }
             else
             {
-                if (UnixPath.IsPathRooted(link))
-                {
-                    path = link;
-                }
-                else
-                {
-                    path = UnixPath.GetDirectoryName(path) + UnixPath.DirectorySeparatorChar + link;
-                    path = UnixPath.GetCanonicalPath(path);
-                }
-
-                wasSymLink = true;
-                return true;
+                path = Path.GetDirectoryName(path) + Path.DirectorySeparatorChar + link;
+                path = GetCanonicalPath(path);
             }
+
+            wasSymLink = true;
+            return true;
+        }
+
+        // Resolves "." and ".." and duplicate separators without touching the disk (same as Mono's UnixPath.GetCanonicalPath)
+        private static string GetCanonicalPath(string path)
+        {
+            GetPathComponents(path, out var dirs, out var lastIndex);
+
+            var end = string.Join(Path.DirectorySeparatorChar, dirs, 0, lastIndex);
+
+            return Path.IsPathRooted(path) ? Path.DirectorySeparatorChar + end : end;
         }
     }
 }

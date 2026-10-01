@@ -3,22 +3,26 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.Linq;
-using Mono.Unix;
-using Mono.Unix.Native;
 using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.EnsureThat;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation;
+using NzbDrone.Mono.Interop;
 
 namespace NzbDrone.Mono.Disk
 {
     public class DiskProvider : DiskProviderBase
     {
-        // Mono supports sending -1 for a uint to indicate that the owner or group should not be set
-        // `unchecked((uint)-1)` and `uint.MaxValue` are the same thing.
+        // chown leaves the owner or group unchanged when given -1, which is `uint.MaxValue`
         private const uint UNCHANGED_ID = uint.MaxValue;
+
+        // rwxrwxrwx (0777), the bits a permission mask may set without a 4th digit
+        private const UnixFileMode AccessPermissions = (UnixFileMode)0x1FF;
+
+        // rwx------ (0700)
+        private const UnixFileMode OwnerPermissions = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
 
         private static readonly Logger Logger = NzbDroneLogger.GetLogger(typeof(DiskProvider));
 
@@ -82,14 +86,14 @@ namespace NzbDrone.Mono.Disk
 
         public override void SetFilePermissions(string path, string mask, string group)
         {
-            var permissions = NativeConvert.FromOctalPermissionString(mask);
+            var permissions = ParsePermissions(mask);
 
             SetPermissions(path, mask, group, permissions);
         }
 
         public override void SetPermissions(string path, string mask, string group)
         {
-            var permissions = NativeConvert.FromOctalPermissionString(mask);
+            var permissions = ParsePermissions(mask);
 
             if (_fileSystem.File.Exists(path))
             {
@@ -99,44 +103,35 @@ namespace NzbDrone.Mono.Disk
             SetPermissions(path, mask, group, permissions);
         }
 
-        protected void SetPermissions(string path, string mask, string group, FilePermissions permissions)
+        protected void SetPermissions(string path, string mask, string group, UnixFileMode permissions)
         {
             _logger.Debug("Setting permissions: {0} on {1}", mask, path);
 
-            // Preserve non-access permissions
-            if (Syscall.stat(path, out var curStat) < 0)
-            {
-                var error = Stdlib.GetLastError();
-
-                throw new LinuxPermissionsException("Error getting current permissions: " + error);
-            }
-
-            // Preserve existing non-access permissions unless mask is 4 digits
+            // Preserve existing non-access permissions (setuid, setgid, sticky) unless mask is 4 digits
             if (mask.Length < 4)
             {
-                permissions |= curStat.st_mode & ~FilePermissions.ACCESSPERMS;
+                permissions |= _fileSystem.File.GetUnixFileMode(path) & ~AccessPermissions;
             }
 
-            if (Syscall.chmod(path, permissions) < 0)
-            {
-                var error = Stdlib.GetLastError();
-
-                throw new LinuxPermissionsException("Error setting permissions: " + error);
-            }
+            _fileSystem.File.SetUnixFileMode(path, permissions);
 
             var groupId = GetGroupId(group);
 
-            if (Syscall.chown(path, unchecked((uint)-1), groupId) < 0)
+            if (LibC.Chown(path, UNCHANGED_ID, groupId) < 0)
             {
-                var error = Stdlib.GetLastError();
-
-                throw new LinuxPermissionsException("Error setting group: " + error);
+                throw new LinuxPermissionsException("Error setting group: " + LibC.LastErrorMessage);
             }
         }
 
-        private static FilePermissions GetFilePermissions(FilePermissions permissions)
+        // Octal string such as "755" or "2775"; throws FormatException if invalid
+        private static UnixFileMode ParsePermissions(string mask)
         {
-            permissions &= ~(FilePermissions.S_IXUSR | FilePermissions.S_IXGRP | FilePermissions.S_IXOTH);
+            return (UnixFileMode)Convert.ToUInt32(mask, 8);
+        }
+
+        private static UnixFileMode GetFilePermissions(UnixFileMode permissions)
+        {
+            permissions &= ~(UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
 
             return permissions;
         }
@@ -145,15 +140,15 @@ namespace NzbDrone.Mono.Disk
         {
             try
             {
-                var permissions = NativeConvert.FromOctalPermissionString(mask);
+                var permissions = ParsePermissions(mask);
 
-                if ((permissions & ~FilePermissions.ACCESSPERMS) != 0)
+                if ((permissions & ~AccessPermissions) != 0)
                 {
                     // Only allow access permissions
                     return false;
                 }
 
-                if ((permissions & FilePermissions.S_IRWXU) != FilePermissions.S_IRWXU)
+                if ((permissions & OwnerPermissions) != OwnerPermissions)
                 {
                     // We expect at least full owner permissions (700)
                     return false;
@@ -171,12 +166,11 @@ namespace NzbDrone.Mono.Disk
         {
             try
             {
-                Syscall.stat(sourcePath, out var srcStat);
-                Syscall.stat(targetPath, out var tgtStat);
+                var sourceMode = _fileSystem.File.GetUnixFileMode(sourcePath);
 
-                if (srcStat.st_mode != tgtStat.st_mode)
+                if (sourceMode != _fileSystem.File.GetUnixFileMode(targetPath))
                 {
-                    Syscall.chmod(targetPath, srcStat.st_mode);
+                    _fileSystem.File.SetUnixFileMode(targetPath, sourceMode);
                 }
             }
             catch (Exception ex)
@@ -255,7 +249,7 @@ namespace NzbDrone.Mono.Disk
 
         protected override void CloneFileInternal(string source, string destination, bool overwrite)
         {
-            if (!FileExists(destination) && !UnixFileSystemInfo.GetFileSystemEntry(source).IsSymbolicLink)
+            if (!FileExists(destination) && GetSymbolicLinkTarget(source) == null)
             {
                 if (_createRefLink.TryCreateRefLink(source, destination))
                 {
@@ -268,31 +262,16 @@ namespace NzbDrone.Mono.Disk
 
         protected override void CopyFileInternal(string source, string destination, bool overwrite)
         {
-            var sourceInfo = UnixFileSystemInfo.GetFileSystemEntry(source);
+            var linkTarget = GetSymbolicLinkTarget(source);
 
-            if (sourceInfo.IsSymbolicLink)
+            if (linkTarget != null)
             {
-                var isSameDir = UnixPath.GetDirectoryName(source) == UnixPath.GetDirectoryName(destination);
-                var symlinkInfo = (UnixSymbolicLinkInfo)sourceInfo;
-                var symlinkPath = symlinkInfo.ContentsPath;
-
-                var newFile = new UnixSymbolicLinkInfo(destination);
-
                 if (FileExists(destination) && overwrite)
                 {
                     DeleteFile(destination);
                 }
 
-                if (isSameDir)
-                {
-                    // We're in the same dir, so we can preserve relative symlinks.
-                    newFile.CreateSymbolicLinkTo(symlinkInfo.ContentsPath);
-                }
-                else
-                {
-                    var fullPath = UnixPath.Combine(UnixPath.GetDirectoryName(source), symlinkPath);
-                    newFile.CreateSymbolicLinkTo(fullPath);
-                }
+                CreateSymbolicLinkCopy(source, destination, linkTarget);
             }
             else
             {
@@ -302,36 +281,21 @@ namespace NzbDrone.Mono.Disk
 
         protected override void MoveFileInternal(string source, string destination)
         {
-            var sourceInfo = UnixFileSystemInfo.GetFileSystemEntry(source);
+            var linkTarget = GetSymbolicLinkTarget(source);
 
-            if (sourceInfo.IsSymbolicLink)
+            if (linkTarget != null)
             {
-                var isSameDir = UnixPath.GetDirectoryName(source) == UnixPath.GetDirectoryName(destination);
-                var symlinkInfo = (UnixSymbolicLinkInfo)sourceInfo;
-                var symlinkPath = symlinkInfo.ContentsPath;
-
-                var newFile = new UnixSymbolicLinkInfo(destination);
-
-                if (isSameDir)
-                {
-                    // We're in the same dir, so we can preserve relative symlinks.
-                    newFile.CreateSymbolicLinkTo(symlinkInfo.ContentsPath);
-                }
-                else
-                {
-                    var fullPath = UnixPath.Combine(UnixPath.GetDirectoryName(source), symlinkPath);
-                    newFile.CreateSymbolicLinkTo(fullPath);
-                }
+                CreateSymbolicLinkCopy(source, destination, linkTarget);
 
                 try
                 {
                     // Finally remove the original symlink.
-                    symlinkInfo.Delete();
+                    _fileSystem.File.Delete(source);
                 }
                 catch
                 {
                     // Removing symlink failed, so rollback the new link and throw.
-                    newFile.Delete();
+                    _fileSystem.File.Delete(destination);
                     throw;
                 }
             }
@@ -339,6 +303,25 @@ namespace NzbDrone.Mono.Disk
             {
                 TransferFilePatched(source, destination, false, true);
             }
+        }
+
+        // Link contents as stored (relative or absolute), null if the path is not a symbolic link
+        private string GetSymbolicLinkTarget(string path)
+        {
+            return _fileSystem.FileInfo.New(path).LinkTarget;
+        }
+
+        private void CreateSymbolicLinkCopy(string source, string destination, string linkTarget)
+        {
+            var sourceFolder = Path.GetDirectoryName(source);
+
+            // In the same dir a relative symlink stays valid, elsewhere make it absolute.
+            if (sourceFolder != Path.GetDirectoryName(destination))
+            {
+                linkTarget = Path.Combine(sourceFolder, linkTarget);
+            }
+
+            _fileSystem.File.CreateSymbolicLink(destination, linkTarget);
         }
 
         private void TransferFilePatched(string source, string destination, bool overwrite, bool move)
@@ -349,13 +332,14 @@ namespace NzbDrone.Mono.Disk
             // Catch the exception and attempt to handle these edgecases
 
             // Mono 6.x till 6.10 doesn't properly try use rename first.
+            // Path.Exists does not follow symlinks (like lstat), so a dangling link at the destination is not overwritten.
             if (move)
             {
-                if (Syscall.lstat(source, out var sourcestat) == 0 &&
-                    Syscall.lstat(destination, out var deststat) != 0 &&
-                    Syscall.rename(source, destination) == 0)
+                if (_fileSystem.Path.Exists(source) &&
+                    !_fileSystem.Path.Exists(destination) &&
+                    LibC.Rename(source, destination) == 0)
                 {
-                    _logger.Trace("Moved '{0}' -> '{1}' using Syscall.rename", source, destination);
+                    _logger.Trace("Moved '{0}' -> '{1}' using rename", source, destination);
                     return;
                 }
             }
@@ -442,32 +426,32 @@ namespace NzbDrone.Mono.Disk
 
         public override bool TryRenameFile(string source, string destination)
         {
-            return Syscall.rename(source, destination) == 0;
+            return LibC.Rename(source, destination) == 0;
         }
 
         public override bool TryCreateHardLink(string source, string destination)
         {
             try
             {
-                var fileInfo = UnixFileSystemInfo.GetFileSystemEntry(source);
-
-                if (fileInfo.IsSymbolicLink)
+                if (GetSymbolicLinkTarget(source) != null)
                 {
                     return false;
                 }
 
-                fileInfo.CreateLink(destination);
-                return true;
-            }
-            catch (UnixIOException ex)
-            {
-                if (ex.ErrorCode == Errno.EXDEV)
+                if (LibC.Link(source, destination) == 0)
+                {
+                    return true;
+                }
+
+                var error = LibC.LastError;
+
+                if (error == LibC.EXDEV)
                 {
                     _logger.Trace("Hardlink '{0}' to '{1}' failed due to cross-device access.", source, destination);
                 }
                 else
                 {
-                    _logger.Debug(ex, "Hardlink '{0}' to '{1}' failed.", source, destination);
+                    _logger.Debug("Hardlink '{0}' to '{1}' failed: {2}", source, destination, LibC.GetErrorMessage(error));
                 }
 
                 return false;
@@ -484,28 +468,6 @@ namespace NzbDrone.Mono.Disk
             return _createRefLink.TryCreateRefLink(source, destination);
         }
 
-        private uint GetUserId(string user)
-        {
-            if (user.IsNullOrWhiteSpace())
-            {
-                return UNCHANGED_ID;
-            }
-
-            if (uint.TryParse(user, out var userId))
-            {
-                return userId;
-            }
-
-            var u = Syscall.getpwnam(user);
-
-            if (u == null)
-            {
-                throw new LinuxPermissionsException("Unknown user: {0}", user);
-            }
-
-            return u.pw_uid;
-        }
-
         private uint GetGroupId(string group)
         {
             if (group.IsNullOrWhiteSpace())
@@ -518,14 +480,12 @@ namespace NzbDrone.Mono.Disk
                 return groupId;
             }
 
-            var g = Syscall.getgrnam(group);
-
-            if (g == null)
+            if (!LibC.TryGetGroupId(group, out groupId))
             {
                 throw new LinuxPermissionsException("Unknown group: {0}", group);
             }
 
-            return g.gr_gid;
+            return groupId;
         }
     }
 }

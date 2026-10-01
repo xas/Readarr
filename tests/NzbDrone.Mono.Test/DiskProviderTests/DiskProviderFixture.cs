@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using FluentAssertions;
@@ -322,6 +323,40 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
             Subject.SetPermissions(tempPath, "0051", null);
             Syscall.stat(tempPath, out fileStat);
             NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0051");
+        }
+
+        private static string Id(string args)
+        {
+            using var process = Process.Start(new ProcessStartInfo("id", args) { RedirectStandardOutput = true });
+            var output = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+            return output;
+        }
+
+        [Test]
+        public void should_set_group_by_name()
+        {
+            var tempFile = GetTempFilePath();
+            File.WriteAllText(tempFile, "File1");
+
+            // Last group of the current user: a supplementary group if there is one, so the group really changes
+            var name = Id("-Gn").Split(' ').Last();
+            var expected = uint.Parse(Id("-G").Split(' ').Last());
+
+            Subject.SetPermissions(tempFile, "755", name);
+
+            Syscall.stat(tempFile, out var fileStat);
+            fileStat.st_gid.Should().Be(expected);
+            NativeConvert.ToOctalPermissionString(fileStat.st_mode).Should().Be("0644");
+        }
+
+        [Test]
+        public void should_throw_for_unknown_group()
+        {
+            var tempFile = GetTempFilePath();
+            File.WriteAllText(tempFile, "File1");
+
+            Assert.Throws<LinuxPermissionsException>(() => Subject.SetPermissions(tempFile, "755", "readarr-unknown-group"));
         }
 
         [Test]

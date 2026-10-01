@@ -11,14 +11,20 @@ using NzbDrone.Common.EnsureThat;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation;
+using NzbDrone.Mono.Interop;
 
 namespace NzbDrone.Mono.Disk
 {
     public class DiskProvider : DiskProviderBase
     {
-        // Mono supports sending -1 for a uint to indicate that the owner or group should not be set
-        // `unchecked((uint)-1)` and `uint.MaxValue` are the same thing.
+        // chown leaves the owner or group unchanged when given -1, which is `uint.MaxValue`
         private const uint UNCHANGED_ID = uint.MaxValue;
+
+        // rwxrwxrwx (0777), the bits a permission mask may set without a 4th digit
+        private const UnixFileMode AccessPermissions = (UnixFileMode)0x1FF;
+
+        // rwx------ (0700)
+        private const UnixFileMode OwnerPermissions = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
 
         private static readonly Logger Logger = NzbDroneLogger.GetLogger(typeof(DiskProvider));
 
@@ -82,14 +88,14 @@ namespace NzbDrone.Mono.Disk
 
         public override void SetFilePermissions(string path, string mask, string group)
         {
-            var permissions = NativeConvert.FromOctalPermissionString(mask);
+            var permissions = ParsePermissions(mask);
 
             SetPermissions(path, mask, group, permissions);
         }
 
         public override void SetPermissions(string path, string mask, string group)
         {
-            var permissions = NativeConvert.FromOctalPermissionString(mask);
+            var permissions = ParsePermissions(mask);
 
             if (_fileSystem.File.Exists(path))
             {
@@ -99,44 +105,35 @@ namespace NzbDrone.Mono.Disk
             SetPermissions(path, mask, group, permissions);
         }
 
-        protected void SetPermissions(string path, string mask, string group, FilePermissions permissions)
+        protected void SetPermissions(string path, string mask, string group, UnixFileMode permissions)
         {
             _logger.Debug("Setting permissions: {0} on {1}", mask, path);
 
-            // Preserve non-access permissions
-            if (Syscall.stat(path, out var curStat) < 0)
-            {
-                var error = Stdlib.GetLastError();
-
-                throw new LinuxPermissionsException("Error getting current permissions: " + error);
-            }
-
-            // Preserve existing non-access permissions unless mask is 4 digits
+            // Preserve existing non-access permissions (setuid, setgid, sticky) unless mask is 4 digits
             if (mask.Length < 4)
             {
-                permissions |= curStat.st_mode & ~FilePermissions.ACCESSPERMS;
+                permissions |= _fileSystem.File.GetUnixFileMode(path) & ~AccessPermissions;
             }
 
-            if (Syscall.chmod(path, permissions) < 0)
-            {
-                var error = Stdlib.GetLastError();
-
-                throw new LinuxPermissionsException("Error setting permissions: " + error);
-            }
+            _fileSystem.File.SetUnixFileMode(path, permissions);
 
             var groupId = GetGroupId(group);
 
-            if (Syscall.chown(path, unchecked((uint)-1), groupId) < 0)
+            if (LibC.Chown(path, UNCHANGED_ID, groupId) < 0)
             {
-                var error = Stdlib.GetLastError();
-
-                throw new LinuxPermissionsException("Error setting group: " + error);
+                throw new LinuxPermissionsException("Error setting group: " + LibC.LastErrorMessage);
             }
         }
 
-        private static FilePermissions GetFilePermissions(FilePermissions permissions)
+        // Octal string such as "755" or "2775"; throws FormatException if invalid
+        private static UnixFileMode ParsePermissions(string mask)
         {
-            permissions &= ~(FilePermissions.S_IXUSR | FilePermissions.S_IXGRP | FilePermissions.S_IXOTH);
+            return (UnixFileMode)Convert.ToUInt32(mask, 8);
+        }
+
+        private static UnixFileMode GetFilePermissions(UnixFileMode permissions)
+        {
+            permissions &= ~(UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
 
             return permissions;
         }
@@ -145,15 +142,15 @@ namespace NzbDrone.Mono.Disk
         {
             try
             {
-                var permissions = NativeConvert.FromOctalPermissionString(mask);
+                var permissions = ParsePermissions(mask);
 
-                if ((permissions & ~FilePermissions.ACCESSPERMS) != 0)
+                if ((permissions & ~AccessPermissions) != 0)
                 {
                     // Only allow access permissions
                     return false;
                 }
 
-                if ((permissions & FilePermissions.S_IRWXU) != FilePermissions.S_IRWXU)
+                if ((permissions & OwnerPermissions) != OwnerPermissions)
                 {
                     // We expect at least full owner permissions (700)
                     return false;
@@ -171,12 +168,11 @@ namespace NzbDrone.Mono.Disk
         {
             try
             {
-                Syscall.stat(sourcePath, out var srcStat);
-                Syscall.stat(targetPath, out var tgtStat);
+                var sourceMode = _fileSystem.File.GetUnixFileMode(sourcePath);
 
-                if (srcStat.st_mode != tgtStat.st_mode)
+                if (sourceMode != _fileSystem.File.GetUnixFileMode(targetPath))
                 {
-                    Syscall.chmod(targetPath, srcStat.st_mode);
+                    _fileSystem.File.SetUnixFileMode(targetPath, sourceMode);
                 }
             }
             catch (Exception ex)
@@ -484,28 +480,6 @@ namespace NzbDrone.Mono.Disk
             return _createRefLink.TryCreateRefLink(source, destination);
         }
 
-        private uint GetUserId(string user)
-        {
-            if (user.IsNullOrWhiteSpace())
-            {
-                return UNCHANGED_ID;
-            }
-
-            if (uint.TryParse(user, out var userId))
-            {
-                return userId;
-            }
-
-            var u = Syscall.getpwnam(user);
-
-            if (u == null)
-            {
-                throw new LinuxPermissionsException("Unknown user: {0}", user);
-            }
-
-            return u.pw_uid;
-        }
-
         private uint GetGroupId(string group)
         {
             if (group.IsNullOrWhiteSpace())
@@ -518,14 +492,12 @@ namespace NzbDrone.Mono.Disk
                 return groupId;
             }
 
-            var g = Syscall.getgrnam(group);
-
-            if (g == null)
+            if (!LibC.TryGetGroupId(group, out groupId))
             {
                 throw new LinuxPermissionsException("Unknown group: {0}", group);
             }
 
-            return g.gr_gid;
+            return groupId;
         }
     }
 }

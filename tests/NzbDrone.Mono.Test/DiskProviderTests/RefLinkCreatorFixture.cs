@@ -27,5 +27,52 @@ namespace NzbDrone.Mono.Test.DiskProviderTests
                 File.Exists(destination).Should().BeFalse();
             }
         }
+
+        [Test]
+        public void should_return_false_when_source_is_missing()
+        {
+            var destination = GetTempFilePath();
+
+            Subject.TryCreateRefLink(GetTempFilePath(), destination).Should().BeFalse();
+
+            File.Exists(destination).Should().BeFalse();
+        }
+
+        [Test]
+        public void should_not_delete_existing_destination_when_source_is_missing()
+        {
+            var destination = GetTempFilePath();
+            File.WriteAllText(destination, "existing");
+
+            Subject.TryCreateRefLink(GetTempFilePath(), destination).Should().BeFalse();
+
+            File.ReadAllText(destination).Should().Be("existing");
+        }
+
+        [Test]
+        [Platform("Linux")]
+        public void should_remove_link_file_when_filesystem_does_not_support_reflinks()
+        {
+            // tmpfs has no FICLONE support
+            Assume.That(Directory.Exists("/dev/shm"));
+
+            var folder = Path.Combine("/dev/shm", Path.GetRandomFileName());
+            Directory.CreateDirectory(folder);
+
+            try
+            {
+                var source = Path.Combine(folder, "source");
+                var destination = Path.Combine(folder, "destination");
+                File.WriteAllText(source, "test");
+
+                Subject.TryCreateRefLink(source, destination).Should().BeFalse();
+
+                File.Exists(destination).Should().BeFalse();
+            }
+            finally
+            {
+                Directory.Delete(folder, true);
+            }
+        }
     }
 }

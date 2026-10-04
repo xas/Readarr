@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using NLog;
 using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Parser;
@@ -27,7 +28,7 @@ namespace NzbDrone.Core.MediaFiles
 
         public static string FormatAudioSampleRate(MediaInfoModel mediaInfo)
         {
-            return $"{(double)mediaInfo.AudioSampleRate / 1000:0.#}kHz";
+            return string.Create(CultureInfo.InvariantCulture, $"{(double)mediaInfo.AudioSampleRate / 1000:0.#}kHz");
         }
 
         public static decimal FormatAudioChannels(MediaInfoModel mediaInfo)
